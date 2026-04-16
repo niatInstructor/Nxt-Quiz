@@ -1,0 +1,827 @@
+[
+  {
+    "id": "react-001",
+    "topic": "JSX",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What does JSX allow you to write in a React component?",
+    "options": [
+      { "id": "A", "text": "SQL queries inside JavaScript" },
+      { "id": "B", "text": "HTML-like markup inside JavaScript" },
+      { "id": "C", "text": "CSS files inside JSON" },
+      { "id": "D", "text": "Server routes inside components" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "JSX is a syntax extension that lets React components describe UI with HTML-like markup in JavaScript.",
+    "tags": ["jsx", "syntax", "components"]
+  },
+  {
+    "id": "react-002",
+    "topic": "Components",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "Which statement best describes a React component?",
+    "options": [
+      { "id": "A", "text": "A reusable function or class that returns UI" },
+      { "id": "B", "text": "A database table used by React" },
+      { "id": "C", "text": "A package manager command" },
+      { "id": "D", "text": "A browser-only CSS selector" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "A React component is a reusable unit of UI, commonly written as a function that returns JSX.",
+    "tags": ["components", "fundamentals"]
+  },
+  {
+    "id": "react-003",
+    "topic": "Props",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "How are props typically used in React?",
+    "options": [
+      { "id": "A", "text": "To pass data from a parent component to a child component" },
+      { "id": "B", "text": "To directly update the DOM outside React" },
+      { "id": "C", "text": "To install React packages" },
+      { "id": "D", "text": "To create database indexes" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Props are read-only inputs passed from parent components to child components.",
+    "tags": ["props", "data-flow"]
+  },
+  {
+    "id": "react-004",
+    "topic": "State",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "Which hook is most commonly used to add local state to a function component?",
+    "options": [
+      { "id": "A", "text": "useFetch" },
+      { "id": "B", "text": "useState" },
+      { "id": "C", "text": "useLocal" },
+      { "id": "D", "text": "useClass" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "useState adds local state and a setter function to a function component.",
+    "tags": ["state", "hooks", "useState"]
+  },
+  {
+    "id": "react-005",
+    "topic": "Events",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "Which JSX prop is commonly used to handle a button click?",
+    "options": [
+      { "id": "A", "text": "onPressing" },
+      { "id": "B", "text": "onclick" },
+      { "id": "C", "text": "onClick" },
+      { "id": "D", "text": "clickHandlerOnly" }
+    ],
+    "correctOptionId": "C",
+    "explanation": "React event handler props use camelCase, so button clicks are handled with onClick.",
+    "tags": ["events", "jsx"]
+  },
+  {
+    "id": "react-006",
+    "topic": "Conditional Rendering",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What is a common way to conditionally render content in JSX?",
+    "options": [
+      { "id": "A", "text": "Using JavaScript expressions such as a ternary operator" },
+      { "id": "B", "text": "Using only SQL CASE statements" },
+      { "id": "C", "text": "Changing the file extension to .html" },
+      { "id": "D", "text": "Calling React.renderCondition()" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "JSX supports JavaScript expressions, including ternaries and logical AND for conditional UI.",
+    "tags": ["conditional-rendering", "jsx"]
+  },
+  {
+    "id": "react-007",
+    "topic": "Lists and Keys",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "Why should list items rendered with map usually include a key prop?",
+    "options": [
+      { "id": "A", "text": "To style each item automatically" },
+      { "id": "B", "text": "To help React identify which items changed, moved, or were removed" },
+      { "id": "C", "text": "To encrypt list data in the browser" },
+      { "id": "D", "text": "To make map return promises" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "Keys help React reconcile list updates efficiently and correctly.",
+    "tags": ["lists", "keys", "reconciliation"]
+  },
+  {
+    "id": "react-008",
+    "topic": "Forms",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What is a controlled input in React?",
+    "options": [
+      { "id": "A", "text": "An input whose value is controlled by React state" },
+      { "id": "B", "text": "An input that cannot be edited" },
+      { "id": "C", "text": "An input stored only in localStorage" },
+      { "id": "D", "text": "An input that skips validation automatically" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "A controlled input receives its value from state and updates that state through events such as onChange.",
+    "tags": ["forms", "controlled-components"]
+  },
+  {
+    "id": "react-009",
+    "topic": "useEffect",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "When does useEffect run if it is called with an empty dependency array?",
+    "options": [
+      { "id": "A", "text": "After every render forever" },
+      { "id": "B", "text": "Only before the component function is called" },
+      { "id": "C", "text": "After the initial render, with cleanup on unmount if returned" },
+      { "id": "D", "text": "Only when a CSS file changes" }
+    ],
+    "correctOptionId": "C",
+    "explanation": "An empty dependency array runs the effect after mount and runs its cleanup when the component unmounts.",
+    "tags": ["hooks", "useEffect", "lifecycle"]
+  },
+  {
+    "id": "react-010",
+    "topic": "useEffect",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What should an effect return when it needs to unsubscribe from something?",
+    "options": [
+      { "id": "A", "text": "A cleanup function" },
+      { "id": "B", "text": "A JSX element" },
+      { "id": "C", "text": "A CSS class name" },
+      { "id": "D", "text": "The component props object" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Effects can return a cleanup function to remove subscriptions, timers, or listeners.",
+    "tags": ["hooks", "useEffect", "cleanup"]
+  },
+  {
+    "id": "react-011",
+    "topic": "Hooks Rules",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "Which rule must React hooks follow?",
+    "options": [
+      { "id": "A", "text": "Hooks must be called inside loops only" },
+      { "id": "B", "text": "Hooks must be called at the top level of React functions or custom hooks" },
+      { "id": "C", "text": "Hooks must be called from CSS modules" },
+      { "id": "D", "text": "Hooks must always return JSX" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "Hooks must be called consistently at the top level so React can preserve hook order across renders.",
+    "tags": ["hooks", "rules-of-hooks"]
+  },
+  {
+    "id": "react-012",
+    "topic": "Fragments",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What is the purpose of a React Fragment?",
+    "options": [
+      { "id": "A", "text": "To group elements without adding an extra DOM node" },
+      { "id": "B", "text": "To create a new browser tab" },
+      { "id": "C", "text": "To force a component to remount every render" },
+      { "id": "D", "text": "To replace JavaScript arrays" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Fragments let a component return multiple elements without wrapping them in an additional DOM element.",
+    "tags": ["fragments", "jsx"]
+  },
+  {
+    "id": "react-013",
+    "topic": "Composition",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What does the special children prop usually contain?",
+    "options": [
+      { "id": "A", "text": "The nested content placed between a component's opening and closing tags" },
+      { "id": "B", "text": "Only browser cookies" },
+      { "id": "C", "text": "The component's CSS file path" },
+      { "id": "D", "text": "A list of installed dependencies" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "children represents nested JSX passed into a component.",
+    "tags": ["children", "composition", "props"]
+  },
+  {
+    "id": "react-014",
+    "topic": "State Updates",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "Why should React state usually be treated as immutable?",
+    "options": [
+      { "id": "A", "text": "Because React detects changes more reliably when new objects or arrays are created" },
+      { "id": "B", "text": "Because JavaScript does not allow object mutation" },
+      { "id": "C", "text": "Because state can only store strings" },
+      { "id": "D", "text": "Because props become writable after mutation" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Creating new references helps React detect updates and avoids accidental mutation bugs.",
+    "tags": ["state", "immutability"]
+  },
+  {
+    "id": "react-015",
+    "topic": "Rendering",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What causes a React function component to render again?",
+    "options": [
+      { "id": "A", "text": "A relevant state update, prop change, or parent render" },
+      { "id": "B", "text": "Only a full browser refresh" },
+      { "id": "C", "text": "Only a CSS hover event" },
+      { "id": "D", "text": "Only installing a new package" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Components render when their state changes, their props change, or their parent renders.",
+    "tags": ["rendering", "state", "props"]
+  },
+  {
+    "id": "react-016",
+    "topic": "Virtual DOM",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What is the Virtual DOM in React?",
+    "options": [
+      { "id": "A", "text": "A lightweight copy of the real DOM that React uses for efficient updates" },
+      { "id": "B", "text": "A separate browser window" },
+      { "id": "C", "text": "A database for storing user credentials" },
+      { "id": "D", "text": "A CSS framework included in React" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "The Virtual DOM is an in-memory representation that React diffs against the real DOM to apply only necessary changes.",
+    "tags": ["virtual-dom", "performance"]
+  },
+  {
+    "id": "react-017",
+    "topic": "Context",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What problem does React Context primarily help solve?",
+    "options": [
+      { "id": "A", "text": "Passing data through many component levels without manually passing props at each level" },
+      { "id": "B", "text": "Compiling TypeScript into CSS" },
+      { "id": "C", "text": "Replacing the browser's event system" },
+      { "id": "D", "text": "Making HTTP requests faster by default" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Context lets deeply nested components consume shared values without prop drilling through every layer.",
+    "tags": ["context", "state-management"]
+  },
+  {
+    "id": "react-018",
+    "topic": "React Router",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "In React Router, what is Link commonly used for?",
+    "options": [
+      { "id": "A", "text": "Client-side navigation between routes" },
+      { "id": "B", "text": "Connecting to a SQL database" },
+      { "id": "C", "text": "Creating a CSS animation timeline" },
+      { "id": "D", "text": "Running unit tests" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Link navigates between routes without forcing a full page reload.",
+    "tags": ["routing", "react-router", "navigation"]
+  },
+  {
+    "id": "react-019",
+    "topic": "React Router",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "Which hook is commonly used in React Router to read route parameters?",
+    "options": [
+      { "id": "A", "text": "useRouteParams" },
+      { "id": "B", "text": "useParams" },
+      { "id": "C", "text": "usePathObject" },
+      { "id": "D", "text": "useDatabaseParams" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "useParams returns dynamic parameters from the current matched route.",
+    "tags": ["routing", "react-router", "params"]
+  },
+  {
+    "id": "react-020",
+    "topic": "Forms",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "Which event is commonly used to update state from a text input?",
+    "options": [
+      { "id": "A", "text": "onChange" },
+      { "id": "B", "text": "onDatabaseWrite" },
+      { "id": "C", "text": "onTextCompile" },
+      { "id": "D", "text": "onRenderOnly" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Controlled inputs commonly use onChange to update the state value displayed by the input.",
+    "tags": ["forms", "events", "state"]
+  },
+  {
+    "id": "react-021",
+    "topic": "Custom Hooks",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What is a custom hook?",
+    "options": [
+      { "id": "A", "text": "A reusable function that can call React hooks and usually starts with use" },
+      { "id": "B", "text": "A CSS selector for custom elements" },
+      { "id": "C", "text": "A new HTML tag built into every browser" },
+      { "id": "D", "text": "A function that must return a class component" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Custom hooks encapsulate reusable stateful logic and follow the same hook rules.",
+    "tags": ["custom-hooks", "hooks", "reuse"]
+  },
+  {
+    "id": "react-022",
+    "topic": "Accessibility",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "Which JSX attribute should be used instead of HTML's for attribute on a label?",
+    "options": [
+      { "id": "A", "text": "labelFor" },
+      { "id": "B", "text": "htmlFor" },
+      { "id": "C", "text": "forText" },
+      { "id": "D", "text": "inputFor" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "React uses htmlFor because for is a reserved JavaScript keyword.",
+    "tags": ["accessibility", "jsx", "forms"]
+  },
+  {
+    "id": "react-023",
+    "topic": "Styling",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "How is a CSS class assigned in JSX?",
+    "options": [
+      { "id": "A", "text": "className" },
+      { "id": "B", "text": "class" },
+      { "id": "C", "text": "cssClassOnly" },
+      { "id": "D", "text": "styleNameRequired" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "JSX uses className to assign CSS classes to elements.",
+    "tags": ["styling", "jsx"]
+  },
+  {
+    "id": "react-024",
+    "topic": "Data Fetching",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "Where is client-side data fetching often placed when it should run after a component renders?",
+    "options": [
+      { "id": "A", "text": "Inside useEffect" },
+      { "id": "B", "text": "Inside the package.json name field" },
+      { "id": "C", "text": "Inside a CSS media query" },
+      { "id": "D", "text": "Inside a browser bookmark" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "useEffect is commonly used for client-side side effects such as fetching data after render.",
+    "tags": ["data-fetching", "useEffect"]
+  },
+  {
+    "id": "react-025",
+    "topic": "React Basics",
+    "difficulty": "Basic",
+    "questionType": "theory",
+    "question": "What command is typically used to create a new React application?",
+    "options": [
+      { "id": "A", "text": "npx create-react-app my-app" },
+      { "id": "B", "text": "npm install html-parser" },
+      { "id": "C", "text": "node build react" },
+      { "id": "D", "text": "git clone react" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "create-react-app is the official scaffolding tool. Alternatives include Vite and Next.js.",
+    "tags": ["setup", "create-react-app"]
+  },
+  {
+    "id": "react-026",
+    "topic": "useState",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be logged when the button is clicked once?",
+    "codeSnippet": "function Counter() {\n  const [count, setCount] = useState(0);\n\n  const handleClick = () => {\n    setCount(count + 1);\n    setCount(count + 1);\n    setCount(count + 1);\n    console.log(count);\n  };\n\n  return <button onClick={handleClick}>Click</button>;\n}",
+    "options": [
+      { "id": "A", "text": "3" },
+      { "id": "B", "text": "1" },
+      { "id": "C", "text": "0" },
+      { "id": "D", "text": "undefined" }
+    ],
+    "correctOptionId": "C",
+    "explanation": "All three setCount calls use the stale 'count' value (0) from the closure. console.log also reads the stale value. After re-render, count will be 1 (not 3).",
+    "tags": ["useState", "closures", "batching"]
+  },
+  {
+    "id": "react-027",
+    "topic": "useState",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be the value of 'count' displayed after clicking the button once?",
+    "codeSnippet": "function Counter() {\n  const [count, setCount] = useState(0);\n\n  const handleClick = () => {\n    setCount(prev => prev + 1);\n    setCount(prev => prev + 1);\n    setCount(prev => prev + 1);\n  };\n\n  return (\n    <div>\n      <p>{count}</p>\n      <button onClick={handleClick}>Add</button>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "1" },
+      { "id": "B", "text": "2" },
+      { "id": "C", "text": "3" },
+      { "id": "D", "text": "0" }
+    ],
+    "correctOptionId": "C",
+    "explanation": "Using the functional updater form (prev => prev + 1) ensures each call uses the latest pending state value. So 0 -> 1 -> 2 -> 3.",
+    "tags": ["useState", "functional-updates", "batching"]
+  },
+  {
+    "id": "react-028",
+    "topic": "useState",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be logged to the console?",
+    "codeSnippet": "function App() {\n  const [items, setItems] = useState([1, 2, 3]);\n\n  const handleClick = () => {\n    items.push(4);\n    setItems(items);\n    console.log(items.length);\n  };\n\n  return <button onClick={handleClick}>{items.join(',')}</button>;\n}",
+    "options": [
+      { "id": "A", "text": "4, and the UI updates to show 1,2,3,4" },
+      { "id": "B", "text": "4, but the UI does NOT update" },
+      { "id": "C", "text": "3, and the UI does NOT update" },
+      { "id": "D", "text": "Error: cannot push to state" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "items.push(4) mutates the array, so items.length is 4. However, setItems(items) passes the same reference, so React sees no change and does NOT re-render.",
+    "tags": ["useState", "immutability", "mutation"]
+  },
+  {
+    "id": "react-029",
+    "topic": "useEffect",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "In what order will the console logs appear on initial render?",
+    "codeSnippet": "function App() {\n  console.log('A');\n\n  useEffect(() => {\n    console.log('B');\n    return () => console.log('C');\n  }, []);\n\n  useEffect(() => {\n    console.log('D');\n  });\n\n  console.log('E');\n\n  return <div>Hello</div>;\n}",
+    "options": [
+      { "id": "A", "text": "A, E, B, D" },
+      { "id": "B", "text": "A, B, D, E" },
+      { "id": "C", "text": "B, D, A, E" },
+      { "id": "D", "text": "A, E, D, B" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Synchronous code (A, E) runs first during render. Effects run after the component mounts, in declaration order (B, then D).",
+    "tags": ["useEffect", "execution-order", "lifecycle"]
+  },
+  {
+    "id": "react-030",
+    "topic": "useEffect",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "How many times will 'Effect ran' be logged after the button is clicked once?",
+    "codeSnippet": "function App() {\n  const [count, setCount] = useState(0);\n  const [name, setName] = useState('React');\n\n  useEffect(() => {\n    console.log('Effect ran');\n  }, [count]);\n\n  const handleClick = () => {\n    setCount(1);\n    setName('Next');\n  };\n\n  return <button onClick={handleClick}>Go</button>;\n}",
+    "options": [
+      { "id": "A", "text": "2 (once for count, once for name)" },
+      { "id": "B", "text": "1 (only because count changed)" },
+      { "id": "C", "text": "0 (nothing changed)" },
+      { "id": "D", "text": "3 (once per state + once for render)" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "The effect depends only on [count]. Even though both count and name changed, React batches the updates into one re-render, and the effect runs once because count changed.",
+    "tags": ["useEffect", "dependencies", "batching"]
+  },
+  {
+    "id": "react-031",
+    "topic": "useEffect",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be logged when count changes from 0 to 1?",
+    "codeSnippet": "function App() {\n  const [count, setCount] = useState(0);\n\n  useEffect(() => {\n    console.log('setup', count);\n    return () => console.log('cleanup', count);\n  }, [count]);\n\n  return (\n    <button onClick={() => setCount(1)}>\n      {count}\n    </button>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "cleanup 0, setup 1" },
+      { "id": "B", "text": "setup 1, cleanup 0" },
+      { "id": "C", "text": "cleanup 1, setup 1" },
+      { "id": "D", "text": "setup 1 only" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "When a dependency changes, React first runs the cleanup from the previous render (cleanup 0), then runs the new setup (setup 1).",
+    "tags": ["useEffect", "cleanup", "closures"]
+  },
+  {
+    "id": "react-032",
+    "topic": "JSX",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be rendered to the screen?",
+    "codeSnippet": "function App() {\n  const name = 'React';\n  const version = 18;\n\n  return (\n    <div>\n      <h1>Hello {name}!</h1>\n      <p>Version: {version}</p>\n      <p>{10 + 5}</p>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "Hello React!, Version: 18, 15" },
+      { "id": "B", "text": "Hello {name}!, Version: {version}, {10 + 5}" },
+      { "id": "C", "text": "Hello React!, Version: 18, 10 + 5" },
+      { "id": "D", "text": "Error: cannot use variables in JSX" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "JSX curly braces evaluate JavaScript expressions. Variables are replaced with their values and arithmetic is computed.",
+    "tags": ["jsx", "expressions"]
+  },
+  {
+    "id": "react-033",
+    "topic": "Props",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be rendered?",
+    "codeSnippet": "function Welcome({ name, age }) {\n  return <p>{name} is {age} years old</p>;\n}\n\nfunction App() {\n  return <Welcome name=\"Alice\" age={25} />;\n}",
+    "options": [
+      { "id": "A", "text": "Alice is 25 years old" },
+      { "id": "B", "text": "name is age years old" },
+      { "id": "C", "text": "undefined is undefined years old" },
+      { "id": "D", "text": "Error: props must be an object" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Props are destructured in the function parameter. name receives 'Alice' and age receives 25.",
+    "tags": ["props", "destructuring"]
+  },
+  {
+    "id": "react-034",
+    "topic": "Conditional Rendering",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be rendered when isLoggedIn is false?",
+    "codeSnippet": "function App() {\n  const isLoggedIn = false;\n\n  return (\n    <div>\n      {isLoggedIn ? (\n        <h1>Welcome back!</h1>\n      ) : (\n        <h1>Please sign in</h1>\n      )}\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "Welcome back!" },
+      { "id": "B", "text": "Please sign in" },
+      { "id": "C", "text": "Both messages" },
+      { "id": "D", "text": "Nothing is rendered" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "The ternary operator checks isLoggedIn. Since it's false, the else branch renders 'Please sign in'.",
+    "tags": ["conditional-rendering", "ternary"]
+  },
+  {
+    "id": "react-035",
+    "topic": "Lists",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be rendered?",
+    "codeSnippet": "function App() {\n  const fruits = ['Apple', 'Banana', 'Cherry'];\n\n  return (\n    <ul>\n      {fruits.map((fruit, index) => (\n        <li key={index}>{fruit}</li>\n      ))}\n    </ul>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "A list with: Apple, Banana, Cherry" },
+      { "id": "B", "text": "Only the first item: Apple" },
+      { "id": "C", "text": "Error: map is not a function" },
+      { "id": "D", "text": "An empty list" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Array.map transforms each fruit into an <li> element. React renders all three items in the list.",
+    "tags": ["lists", "map", "keys"]
+  },
+  {
+    "id": "react-036",
+    "topic": "State",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be displayed after clicking the button twice?",
+    "codeSnippet": "function Counter() {\n  const [count, setCount] = useState(10);\n\n  return (\n    <div>\n      <p>{count}</p>\n      <button onClick={() => setCount(count - 3)}>Subtract</button>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "4" },
+      { "id": "B", "text": "7" },
+      { "id": "C", "text": "10" },
+      { "id": "D", "text": "1" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Starting at 10, first click: 10-3=7, second click: 7-3=4. Each click subtracts 3.",
+    "tags": ["useState", "state-updates"]
+  },
+  {
+    "id": "react-037",
+    "topic": "Events",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What happens when the button is clicked?",
+    "codeSnippet": "function App() {\n  const [text, setText] = useState('Hello');\n\n  return (\n    <div>\n      <p>{text}</p>\n      <button onClick={() => setText('World')}>Change</button>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "The paragraph changes from 'Hello' to 'World'" },
+      { "id": "B", "text": "Nothing happens" },
+      { "id": "C", "text": "Both 'Hello' and 'World' are displayed" },
+      { "id": "D", "text": "An error occurs" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Clicking the button calls setText('World'), which updates the state. React re-renders and the <p> now shows 'World'.",
+    "tags": ["events", "useState", "state-updates"]
+  },
+  {
+    "id": "react-038",
+    "topic": "Conditional Rendering",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be rendered to the screen?",
+    "codeSnippet": "function App() {\n  const items = [];\n\n  return (\n    <div>\n      <h1>List</h1>\n      {items.length && <ul>{items.map(i => <li key={i}>{i}</li>)}</ul>}\n      <p>End</p>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "List, then End (nothing between them)" },
+      { "id": "B", "text": "List, 0, End" },
+      { "id": "C", "text": "List, false, End" },
+      { "id": "D", "text": "List, End, with an empty <ul>" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "items.length is 0, which is falsy. But unlike false or null, the number 0 IS rendered by React. So you see '0' on screen. The fix is to use items.length > 0.",
+    "tags": ["conditional-rendering", "falsy-values", "gotcha"]
+  },
+  {
+    "id": "react-039",
+    "topic": "Props",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be rendered?",
+    "codeSnippet": "function Greeting({ name = 'World' }) {\n  return <h1>Hello, {name}!</h1>;\n}\n\nfunction App() {\n  return (\n    <div>\n      <Greeting name=\"React\" />\n      <Greeting name={undefined} />\n      <Greeting />\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "Hello, React! / Hello, World! / Hello, World!" },
+      { "id": "B", "text": "Hello, React! / Hello, undefined! / Hello, World!" },
+      { "id": "C", "text": "Hello, React! / Hello, React! / Hello, World!" },
+      { "id": "D", "text": "All three show Hello, World!" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Default parameters activate for undefined (or missing). So name=undefined and missing name both use the default 'World'.",
+    "tags": ["props", "default-values"]
+  },
+  {
+    "id": "react-040",
+    "topic": "Children",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be rendered?",
+    "codeSnippet": "function Wrapper({ children }) {\n  return (\n    <div className=\"box\">\n      <h2>Wrapper</h2>\n      {children}\n      {children}\n    </div>\n  );\n}\n\nfunction App() {\n  return (\n    <Wrapper>\n      <p>Hello</p>\n    </Wrapper>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "Wrapper, Hello, Hello" },
+      { "id": "B", "text": "Wrapper, Hello" },
+      { "id": "C", "text": "Error: children can only be used once" },
+      { "id": "D", "text": "Wrapper only" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "children is just a prop. You can render it as many times as you like. Each {children} renders the <p>Hello</p> element.",
+    "tags": ["children", "composition", "rendering"]
+  },
+  {
+    "id": "react-041",
+    "topic": "Component Lifecycle",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What is the order of console logs when toggle changes from false to true?",
+    "codeSnippet": "function Child() {\n  console.log('Child render');\n\n  useEffect(() => {\n    console.log('Child mounted');\n    return () => console.log('Child unmounted');\n  }, []);\n\n  return <p>Child</p>;\n}\n\nfunction App() {\n  const [show, setShow] = useState(false);\n\n  return (\n    <div>\n      {show && <Child />}\n      <button onClick={() => setShow(true)}>Show</button>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "Child render, Child mounted" },
+      { "id": "B", "text": "Child mounted, Child render" },
+      { "id": "C", "text": "Child render only" },
+      { "id": "D", "text": "Child mounted only" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "When show becomes true, React renders <Child /> (logging 'Child render'), then the useEffect runs (logging 'Child mounted'). Render always happens before effects.",
+    "tags": ["lifecycle", "conditional-rendering", "useEffect"]
+  },
+  {
+    "id": "react-042",
+    "topic": "Events",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be logged when the inner button is clicked?",
+    "codeSnippet": "function App() {\n  const handleOuter = () => console.log('outer');\n  const handleInner = (e) => {\n    e.stopPropagation();\n    console.log('inner');\n  };\n\n  return (\n    <div onClick={handleOuter}>\n      <button onClick={handleInner}>Click me</button>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "inner, outer" },
+      { "id": "B", "text": "inner only" },
+      { "id": "C", "text": "outer only" },
+      { "id": "D", "text": "outer, inner" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "e.stopPropagation() prevents the click event from bubbling up to the parent div. So only 'inner' is logged.",
+    "tags": ["events", "stopPropagation", "bubbling"]
+  },
+  {
+    "id": "react-043",
+    "topic": "State",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will happen when the button is clicked?",
+    "codeSnippet": "function App() {\n  const [text, setText] = useState('');\n\n  const handleClick = () => {\n    setText('Hello');\n    setText(prev => prev + ' World');\n    setText(prev => prev + '!');\n  };\n\n  return <p>{text || 'empty'}</p>;\n}",
+    "options": [
+      { "id": "A", "text": "Shows: !" },
+      { "id": "B", "text": "Shows: Hello World!" },
+      { "id": "C", "text": "Shows: Hello" },
+      { "id": "D", "text": "Shows: World!" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "setText('Hello') sets pending state to 'Hello'. Then setText(prev => prev + ' World') gets 'Hello' as prev. Then the next updater appends '!'. Result: 'Hello World!'.",
+    "tags": ["setState", "updater-function", "batching"]
+  },
+  {
+    "id": "react-044",
+    "topic": "Array State",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "After clicking 'Remove', what will be displayed?",
+    "codeSnippet": "function App() {\n  const [items, setItems] = useState(['a', 'b', 'c', 'd']);\n\n  const handleRemove = () => {\n    setItems(prev => prev.filter((_, i) => i !== 1));\n  };\n\n  return (\n    <div>\n      <p>{items.join(', ')}</p>\n      <button onClick={handleRemove}>Remove</button>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "a, c, d" },
+      { "id": "B", "text": "b, c, d" },
+      { "id": "C", "text": "a, b, d" },
+      { "id": "D", "text": "a, b, c" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "filter((_, i) => i !== 1) removes the element at index 1, which is 'b'. The new array is ['a', 'c', 'd'].",
+    "tags": ["array-state", "filter", "immutability"]
+  },
+  {
+    "id": "react-045",
+    "topic": "Array State",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be displayed after clicking 'Update'?",
+    "codeSnippet": "function App() {\n  const [users, setUsers] = useState([\n    { id: 1, name: 'Alice' },\n    { id: 2, name: 'Bob' }\n  ]);\n\n  const handleUpdate = () => {\n    setUsers(prev =>\n      prev.map(u =>\n        u.id === 2 ? { ...u, name: 'Charlie' } : u\n      )\n    );\n  };\n\n  return (\n    <div>\n      {users.map(u => <p key={u.id}>{u.name}</p>)}\n      <button onClick={handleUpdate}>Update</button>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "Alice, Charlie" },
+      { "id": "B", "text": "Alice, Bob, Charlie" },
+      { "id": "C", "text": "Charlie, Bob" },
+      { "id": "D", "text": "Alice, Bob (no change)" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "map creates a new array. For id===2, it creates a new object with name: 'Charlie'. Result: Alice, Charlie.",
+    "tags": ["array-state", "map", "immutable-update"]
+  },
+  {
+    "id": "react-046",
+    "topic": "JSX Expressions",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be rendered to the screen?",
+    "codeSnippet": "function App() {\n  const score = 85;\n\n  return (\n    <div>\n      <p>\n        {score >= 90\n          ? 'Excellent'\n          : score >= 80\n          ? 'Good'\n          : score >= 70\n          ? 'Average'\n          : 'Poor'}\n      </p>\n      <p>{score > 50 && score < 100 && 'Valid'}</p>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "Good, Valid" },
+      { "id": "B", "text": "Excellent, Valid" },
+      { "id": "C", "text": "Average, Valid" },
+      { "id": "D", "text": "Good, true" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "score=85 is not >=90 but is >=80, so 'Good'. The logical AND chain evaluates to the string 'Valid'.",
+    "tags": ["jsx", "ternary", "logical-and"]
+  },
+  {
+    "id": "react-047",
+    "topic": "Context",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will the Child component display?",
+    "codeSnippet": "const ThemeContext = createContext('light');\n\nfunction Child() {\n  const theme = useContext(ThemeContext);\n  return <p>{theme}</p>;\n}\n\nfunction App() {\n  return (\n    <ThemeContext.Provider value=\"dark\">\n      <ThemeContext.Provider value=\"blue\">\n        <Child />\n      </ThemeContext.Provider>\n    </ThemeContext.Provider>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "light" },
+      { "id": "B", "text": "dark" },
+      { "id": "C", "text": "blue" },
+      { "id": "D", "text": "undefined" }
+    ],
+    "correctOptionId": "C",
+    "explanation": "useContext reads from the nearest Provider above it in the tree. The inner Provider with value='blue' is closest to Child.",
+    "tags": ["context", "useContext", "providers"]
+  },
+  {
+    "id": "react-048",
+    "topic": "Forms",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be shown in the input when the user types 'hello'?",
+    "codeSnippet": "function App() {\n  const [value, setValue] = useState('');\n\n  return (\n    <input\n      value={value}\n      onChange={(e) => setValue(e.target.value.toUpperCase())}\n      placeholder=\"Type here\"\n    />\n  );\n}",
+    "options": [
+      { "id": "A", "text": "hello" },
+      { "id": "B", "text": "HELLO" },
+      { "id": "C", "text": "Hello" },
+      { "id": "D", "text": "The input will be empty" }
+    ],
+    "correctOptionId": "B",
+    "explanation": "The onChange handler converts the input to uppercase before setting state. Since the input's value is tied to state, it always displays the uppercase version.",
+    "tags": ["forms", "controlled-input", "state"]
+  },
+  {
+    "id": "react-049",
+    "topic": "State",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be displayed after clicking 'Toggle' twice?",
+    "codeSnippet": "function App() {\n  const [visible, setVisible] = useState(true);\n\n  return (\n    <div>\n      {visible && <p>I am visible!</p>}\n      <button onClick={() => setVisible(prev => !prev)}>\n        Toggle\n      </button>\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "The paragraph is visible (back to initial state)" },
+      { "id": "B", "text": "The paragraph is hidden" },
+      { "id": "C", "text": "Two paragraphs are shown" },
+      { "id": "D", "text": "Error: cannot negate a boolean" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Starting true, first click sets to false (hides), second click sets to true (shows). After two clicks, it's back to the initial visible state.",
+    "tags": ["state", "toggle", "conditional-rendering"]
+  },
+  {
+    "id": "react-050",
+    "topic": "Props",
+    "difficulty": "Basic",
+    "questionType": "code-output",
+    "question": "What will be rendered?",
+    "codeSnippet": "function Badge({ type }) {\n  const colors = {\n    success: 'green',\n    error: 'red',\n    warning: 'orange'\n  };\n\n  return (\n    <span style={{ color: colors[type] || 'gray' }}>\n      {type ? type.toUpperCase() : 'UNKNOWN'}\n    </span>\n  );\n}\n\nfunction App() {\n  return (\n    <div>\n      <Badge type=\"error\" />\n      <Badge type=\"info\" />\n      <Badge />\n    </div>\n  );\n}",
+    "options": [
+      { "id": "A", "text": "ERROR (red), INFO (gray), UNKNOWN (gray)" },
+      { "id": "B", "text": "ERROR (red), info (gray), (nothing)" },
+      { "id": "C", "text": "error (red), INFO (gray), UNKNOWN (gray)" },
+      { "id": "D", "text": "ERROR (red), undefined (gray), Error thrown" }
+    ],
+    "correctOptionId": "A",
+    "explanation": "type='error' maps to red and uppercases to ERROR. type='info' has no color so falls back to gray. Missing type uses the ternary fallback 'UNKNOWN'.",
+    "tags": ["props", "fallbacks", "dynamic-styling"]
+  }
+]
