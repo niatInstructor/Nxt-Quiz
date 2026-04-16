@@ -9,8 +9,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
   Cell,
 } from "recharts";
 
@@ -119,7 +117,7 @@ export default function Analytics({
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            📊 Analytics
+            Analytics
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {data.examTitle}
@@ -129,7 +127,7 @@ export default function Analytics({
           onClick={exportCSV}
           className="px-5 py-2.5 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all"
         >
-          📥 Export CSV
+          Export CSV
         </button>
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 
 interface Student {
   id: string;
@@ -19,18 +20,19 @@ export default function StudentsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     const res = await fetch("/api/admin/students");
     if (res.ok) {
       const data = await res.json();
       setStudents(data.students || []);
     }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStudents();
-  }, []);
+  }, [fetchStudents]);
 
   const handleDeleteAll = async () => {
     const confirmText = prompt('This will PERMANENTLY delete ALL students, their results, and their accounts. This action is IRREVERSIBLE. Type "DELETE ALL" to confirm:');
@@ -148,12 +150,12 @@ export default function StudentsPage() {
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <a
+                      <Link
                         href={`/admin/students/${s.id}`}
                         className="px-3 py-1 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-all"
                       >
                         View
-                      </a>
+                      </Link>
                       {deletingId === s.id ? (
                         <div className="spinner inline-block" style={{ width: 16, height: 16 }} />
                       ) : (

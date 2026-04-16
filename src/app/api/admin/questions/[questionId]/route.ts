@@ -43,7 +43,15 @@ export async function PATCH(
 
   const supabase = createAdminClient();
 
-  const updates: any = {};
+  const updates: {
+    topic?: string;
+    difficulty?: string;
+    question?: string;
+    options?: string;
+    correct_option_id?: string;
+    explanation?: string;
+    tags?: string[];
+  } = {};
   if (topic) updates.topic = topic;
   if (difficulty) updates.difficulty = difficulty;
   if (question) updates.question = question;

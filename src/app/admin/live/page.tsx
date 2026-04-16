@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 
 interface Exam {
   id: string;
@@ -17,7 +18,7 @@ export default function LiveMonitor() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchExams = async () => {
+  const fetchExams = useCallback(async () => {
     const res = await fetch("/api/admin/exams");
     if (res.ok) {
       const data = await res.json();
@@ -27,13 +28,14 @@ export default function LiveMonitor() {
       setExams(live);
     }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchExams();
     const interval = setInterval(fetchExams, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchExams]);
 
   if (loading) {
     return (
@@ -71,7 +73,7 @@ export default function LiveMonitor() {
             const progress = Math.min((exam.participant_count / exam.capacity) * 100, 100);
             
             return (
-              <a
+              <Link
                 key={exam.id}
                 href={`/admin/exams/${exam.id}`}
                 className="glass-card p-6 hover:border-primary/50 transition-all group"
@@ -120,7 +122,7 @@ export default function LiveMonitor() {
                     </span>
                   </div>
                 </div>
-              </a>
+              </Link>
             );
           })}
         </div>

@@ -3,6 +3,34 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 
+interface Question {
+  id: string;
+  topic: string;
+  question: string;
+  options: unknown;
+  correct_option_id: string;
+  explanation: string;
+}
+
+interface Answer {
+  id: string;
+  selected_option_id: string;
+  questions: Question;
+}
+
+interface Attempt {
+  id: string;
+  status: string;
+  created_at: string;
+  total_score: number;
+  max_score: number;
+  exams: {
+    title: string;
+    exam_code: string;
+  };
+  answers?: Answer[];
+}
+
 interface StudentData {
   student: {
     id: string;
@@ -12,7 +40,7 @@ interface StudentData {
     onboarded_at: string;
     created_at: string;
   };
-  attempts: any[];
+  attempts: Attempt[];
 }
 
 export default function StudentDetails({
@@ -27,14 +55,14 @@ export default function StudentDetails({
   const router = useRouter();
 
   useEffect(() => {
-    const fetchStudent = async () => {
+    async function fetchStudent() {
       const res = await fetch(`/api/admin/students/${studentId}`);
       if (res.ok) {
         const json = await res.json();
         setData(json);
       }
       setLoading(false);
-    };
+    }
     fetchStudent();
   }, [studentId]);
 
@@ -139,7 +167,7 @@ export default function StudentDetails({
               </div>
 
               <div className="p-6 space-y-8">
-                {attempt.answers.map((ans: any, idx: number) => {
+                {attempt.answers.map((ans, idx) => {
                   const isCorrect = ans.selected_option_id === ans.questions.correct_option_id;
                   const opts = typeof ans.questions.options === 'string' ? JSON.parse(ans.questions.options) : ans.questions.options;
                   
@@ -157,13 +185,12 @@ export default function StudentDetails({
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {opts.map((opt: any) => {
+                        {opts.map((opt: { id: string; text: string }) => {
                           const isSelected = ans.selected_option_id === opt.id;
                           const isCorrectOpt = ans.questions.correct_option_id === opt.id;
                           
                           let borderColor = 'border-border';
                           let bgColor = 'bg-card';
-                          let textColor = 'text-foreground';
 
                           if (isCorrectOpt) {
                             borderColor = 'border-success';
@@ -176,7 +203,7 @@ export default function StudentDetails({
                           return (
                             <div
                               key={opt.id}
-                              className={`p-3 rounded-xl border-2 text-sm flex gap-3 ${borderColor} ${bgColor} ${textColor}`}
+                              className={`p-3 rounded-xl border-2 text-sm flex gap-3 ${borderColor} ${bgColor} text-foreground`}
                             >
                               <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${isCorrectOpt ? 'bg-success text-white' : isSelected ? 'bg-danger text-white' : 'bg-border/50 text-muted-foreground'}`}>
                                 {opt.id}
@@ -203,7 +230,7 @@ export default function StudentDetails({
               </div>
               <h3 className="text-lg font-bold text-foreground mb-2">Attempt in Progress</h3>
               <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                This student is currently taking the exam or hasn't submitted yet. Detailed answers will be available once the attempt is closed.
+                This student is currently taking the exam or hasn&apos;t submitted yet. Detailed answers will be available once the attempt is closed.
               </p>
             </div>
           ) : (

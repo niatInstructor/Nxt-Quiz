@@ -15,7 +15,20 @@ export async function POST(request: Request) {
 
   const supabase = createAdminClient();
 
-  const formatted = questions.map((q: any) => ({
+  interface ImportQuestion {
+    id?: string;
+    topic?: string;
+    difficulty?: string;
+    question: string;
+    options: unknown;
+    correct_option_id?: string;
+    correctOptionId?: string;
+    explanation?: string;
+    tags?: string[];
+    points?: number;
+  }
+
+  const formatted = questions.map((q: ImportQuestion) => ({
     id: q.id || `q-${Math.random().toString(36).substr(2, 9)}`,
     topic: q.topic || "Unknown",
     difficulty: q.difficulty || "Basic",
@@ -24,7 +37,6 @@ export async function POST(request: Request) {
     correct_option_id: q.correct_option_id || q.correctOptionId,
     explanation: q.explanation || "",
     tags: q.tags || [],
-    points: q.points || 1
   }));
 
   const { data, error } = await supabase

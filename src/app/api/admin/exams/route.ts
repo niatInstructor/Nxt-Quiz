@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { nanoid } from "nanoid";
-import questionsData from "@/data/react-mcq-50.json";
 
 // GET — list all exams
 export async function GET(request: Request) {

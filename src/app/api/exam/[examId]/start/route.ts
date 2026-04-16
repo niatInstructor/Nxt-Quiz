@@ -25,7 +25,7 @@ export async function POST(
   // So we'll do the logic inline with service role.
 
   // Get exam
-  const { data: exam, error: examError } = await supabase
+  const { data: exam } = await supabase
     .from("exams")
     .select("*")
     .eq("id", examId)

@@ -16,8 +16,6 @@ export default function WaitingRoom({
   const router = useRouter();
 
   const fetchExamData = useCallback(async () => {
-    const supabase = createClient();
-
     // Use API to bypass RLS
     const res = await fetch(`/api/exam/${examId}/status`);
     if (res.ok) {
@@ -38,6 +36,7 @@ export default function WaitingRoom({
   }, [examId, router]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchExamData();
 
     const supabase = createClient();

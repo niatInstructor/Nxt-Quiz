@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+
+interface Option {
+  id: string;
+  text: string;
+}
 
 interface Question {
   id: string;
   topic: string;
   difficulty: string;
   question: string;
-  options: any;
+  options: Option[];
   correct_option_id: string;
   explanation: string;
   tags: string[];
@@ -37,18 +42,18 @@ export default function QuestionBank() {
     tags: [],
   });
 
-  const fetchQuestions = async () => {
+  const fetchQuestions = useCallback(async () => {
     const res = await fetch("/api/admin/questions");
     if (res.ok) {
       const data = await res.json();
       setQuestions(data.questions || []);
     }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     fetchQuestions();
-  }, []);
+  }, [fetchQuestions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,7 +140,7 @@ export default function QuestionBank() {
       } else {
         alert("Import failed.");
       }
-    } catch (err) {
+    } catch {
       alert("Invalid JSON file.");
     } finally {
       setImporting(false);
@@ -309,7 +314,7 @@ export default function QuestionBank() {
 
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-muted-foreground mb-1">Options</label>
-                {(form.options || []).map((opt: any, idx: number) => (
+                {(form.options || []).map((opt: Option, idx: number) => (
                   <div key={opt.id} className="flex items-center gap-3">
                     <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${form.correct_option_id === opt.id ? 'bg-success text-white' : 'bg-border text-muted-foreground'}`}>
                       {opt.id}
@@ -318,7 +323,7 @@ export default function QuestionBank() {
                       type="text"
                       value={opt.text}
                       onChange={e => {
-                        const newOpts = [...form.options];
+                        const newOpts = [...(form.options || [])];
                         newOpts[idx].text = e.target.value;
                         setForm(prev => ({ ...prev, options: newOpts }));
                       }}

@@ -3,9 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ examId: string }> }
 ) {
-  const { examId } = await params;
   const body = await request.json();
   const { attemptId, questionId, selected_option_id, is_bookmarked, is_skipped } =
     body;

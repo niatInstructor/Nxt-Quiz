@@ -51,6 +51,14 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 /* Card */
 .glass-card {
   background: #ffffff;

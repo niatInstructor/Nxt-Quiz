@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { topic, difficulty, question, options, correct_option_id, explanation, tags, code_snippet, question_type } = body;
+  const { topic, difficulty, question, options, correct_option_id, explanation, tags } = body;
 
   const supabase = createAdminClient();
 

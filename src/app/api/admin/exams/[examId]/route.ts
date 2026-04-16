@@ -67,7 +67,7 @@ export async function PATCH(
   const { title, durationMinutes, capacity } = await request.json();
   const supabase = createAdminClient();
 
-  const updates: any = {};
+  const updates: { title?: string; duration_seconds?: number; capacity?: number } = {};
   if (title) updates.title = title;
   if (durationMinutes) updates.duration_seconds = durationMinutes * 60;
   if (capacity) updates.capacity = capacity;

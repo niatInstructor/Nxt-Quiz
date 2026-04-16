@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 interface Exam {
   id: string;
@@ -60,12 +61,12 @@ export default function AdminDashboard() {
             Manage and monitor all exams
           </p>
         </div>
-        <a
+        <Link
           href="/admin/exams/new"
           className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02] active:scale-[0.98] transition-all"
         >
           + Create Exam
-        </a>
+        </Link>
       </div>
 
       {/* Stats */}
@@ -87,17 +88,17 @@ export default function AdminDashboard() {
       {exams.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <p className="text-muted-foreground mb-4">No exams created yet</p>
-          <a
+          <Link
             href="/admin/exams/new"
             className="text-primary hover:text-primary-hover text-sm"
           >
             Create your first exam →
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="space-y-3">
           {exams.map((exam) => (
-            <a
+            <Link
               key={exam.id}
               href={`/admin/exams/${exam.id}`}
               className="block glass-card p-5 hover:border-border-hover transition-all group"
@@ -136,7 +137,7 @@ export default function AdminDashboard() {
                   </svg>
                 </div>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       )}
