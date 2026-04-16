@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/browser";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isValidStudentId, STUDENT_ID_ERROR, normalizeStudentId } from "@/lib/student-id";
+import { isValidStudentId, STUDENT_ID_ERROR, STUDENT_ID_EXAMPLE, normalizeStudentId } from "@/lib/student-id";
 
 export default function Onboarding() {
   const [collegeId, setCollegeId] = useState("");
@@ -100,7 +100,7 @@ export default function Onboarding() {
                 type="text"
                 value={collegeId}
                 onChange={(e) => setCollegeId(e.target.value.toUpperCase())}
-                placeholder="e.g. CS2024001"
+                placeholder={`e.g. ${STUDENT_ID_EXAMPLE}`}
                 className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
                 required
                 autoFocus
