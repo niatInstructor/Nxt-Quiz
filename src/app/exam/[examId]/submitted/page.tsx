@@ -11,6 +11,9 @@ export default function Submitted({
 }) {
   const { examId } = use(params);
   const [submittedAt, setSubmittedAt] = useState("");
+  const [score, setScore] = useState<number | null>(null);
+  const [maxScore, setMaxScore] = useState<number | null>(null);
+  const [examTitle, setExamTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -24,13 +27,28 @@ export default function Submitted({
 
       const { data: attempt } = await supabase
         .from("attempts")
-        .select("submitted_at, status")
+        .select("submitted_at, status, total_score, max_score")
         .eq("exam_id", examId)
         .eq("user_id", user.id)
         .single();
 
+      const { data: exam } = await supabase
+        .from("exams")
+        .select("title")
+        .eq("id", examId)
+        .single();
+
+      if (exam) {
+        setExamTitle(exam.title);
+      }
+
       if (attempt?.submitted_at) {
         setSubmittedAt(new Date(attempt.submitted_at).toLocaleString());
+      }
+      
+      if (attempt) {
+        setScore(attempt.total_score);
+        setMaxScore(attempt.max_score);
       }
 
       setLoading(false);
@@ -45,6 +63,8 @@ export default function Submitted({
       </div>
     );
   }
+
+  const percentage = maxScore ? Math.round((score || 0) / maxScore * 100) : 0;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -67,34 +87,65 @@ export default function Submitted({
         </div>
 
         <h1 className="text-3xl font-bold text-foreground mb-2">
-          Exam Submitted!
+          Exam Completed!
         </h1>
         <p className="text-muted-foreground mb-8">
-          Your answers have been recorded successfully.
+          {examTitle || "Your assessment"} has been submitted successfully.
         </p>
 
-        <div className="glass-card p-6 mb-8">
-          <div className="text-sm text-muted-foreground">
-            <p className="mb-2">
-              <span className="text-foreground font-medium">Submitted at:</span>{" "}
+        <div className="glass-card p-8 mb-8">
+          <div className="mb-6">
+            <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wider font-semibold">Your Score</p>
+            <div className="flex items-baseline justify-center gap-1">
+              <span className="text-5xl font-black gradient-text">{score ?? 0}</span>
+              <span className="text-xl text-muted-foreground font-medium">/ {maxScore ?? 0}</span>
+            </div>
+          </div>
+
+          <div className="w-full bg-muted/30 h-3 rounded-full overflow-hidden mb-6">
+            <div 
+              className="h-full bg-gradient-to-r from-success to-accent transition-all duration-1000 ease-out"
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="p-3 rounded-xl bg-card border border-border">
+              <p className="text-muted-foreground text-xs mb-1">Percentage</p>
+              <p className="text-foreground font-bold text-lg">{percentage}%</p>
+            </div>
+            <div className="p-3 rounded-xl bg-card border border-border">
+              <p className="text-muted-foreground text-xs mb-1">Status</p>
+              <p className="text-success font-bold text-lg">Passed</p>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-border/50 text-sm text-muted-foreground">
+            <p>
+              <span className="text-foreground font-medium">Submitted on:</span>{" "}
               {submittedAt || "Processing..."}
-            </p>
-            <p className="text-xs mt-4 text-muted">
-              Your exam has been locked. Results will be shared by your
-              instructor.
             </p>
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            const supabase = createClient();
-            supabase.auth.signOut().then(() => router.push("/login"));
-          }}
-          className="px-6 py-3 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all"
-        >
-          Sign Out
-        </button>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => router.push("/exam/join")}
+            className="w-full px-6 py-4 rounded-2xl text-sm font-bold bg-foreground text-background hover:opacity-90 transition-all shadow-lg"
+          >
+            Back to Exams
+          </button>
+          
+          <button
+            onClick={() => {
+              const supabase = createClient();
+              supabase.auth.signOut().then(() => router.push("/login"));
+            }}
+            className="w-full px-6 py-4 rounded-2xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
     </div>
   );

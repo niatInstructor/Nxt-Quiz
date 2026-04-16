@@ -29,6 +29,9 @@ export default function ReviewExam({
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isNavigatingBack, setIsNavigatingBack] = useState(false);
+  const [isOpeningConfirm, setIsOpeningConfirm] = useState(false);
+  const [navigatingToQuestion, setNavigatingToQuestion] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -94,6 +97,25 @@ export default function ReviewExam({
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft !== null]);
+
+  const handleBackToExam = () => {
+    setIsNavigatingBack(true);
+    router.push(`/exam/${examId}/take`);
+  };
+
+  const handleGoToQuestion = (questionId: string) => {
+    setNavigatingToQuestion(questionId);
+    router.push(`/exam/${examId}/take`);
+  };
+
+  const handleOpenConfirm = () => {
+    setIsOpeningConfirm(true);
+    // Brief delay to show interaction before modal pops
+    setTimeout(() => {
+      setShowConfirm(true);
+      setIsOpeningConfirm(false);
+    }, 150);
+  };
 
   const handleSubmit = async () => {
     if (!attemptId || submitting) return;
@@ -209,14 +231,20 @@ export default function ReviewExam({
                 {items.map((q) => (
                   <button
                     key={q.id}
-                    onClick={() => router.push(`/exam/${examId}/take`)}
-                    className="w-full text-left p-3 rounded-xl bg-card border border-border hover:border-border-hover hover:bg-card-hover transition-all text-sm"
+                    disabled={navigatingToQuestion !== null || isNavigatingBack || submitting || isOpeningConfirm}
+                    onClick={() => handleGoToQuestion(q.id)}
+                    className="w-full text-left p-3 rounded-xl bg-card border border-border hover:border-border-hover hover:bg-card-hover transition-all text-sm disabled:opacity-70 flex items-center justify-between"
                   >
-                    <span className="text-muted-foreground mr-2">Q{questions.indexOf(q) + 1}.</span>
-                    <span className="text-foreground">
-                      {q.question.length > 80 ? q.question.slice(0, 80) + "..." : q.question}
-                    </span>
-                    <span className="text-xs text-muted ml-2">[{q.topic}]</span>
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-2">Q{questions.indexOf(q) + 1}.</span>
+                      <span className="text-foreground">
+                        {q.question.length > 80 ? q.question.slice(0, 80) + "..." : q.question}
+                      </span>
+                      <span className="text-xs text-muted ml-2">[{q.topic}]</span>
+                    </div>
+                    {navigatingToQuestion === q.id && (
+                      <div className="spinner" style={{ width: 14, height: 14 }} />
+                    )}
                   </button>
                 ))}
               </div>
@@ -225,18 +253,30 @@ export default function ReviewExam({
 
         <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
           <button
-            onClick={() => router.push(`/exam/${examId}/take`)}
-            className="px-6 py-3 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all flex items-center gap-2"
+            onClick={handleBackToExam}
+            disabled={isNavigatingBack || submitting || isOpeningConfirm || navigatingToQuestion !== null}
+            className="px-6 py-3 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all flex items-center gap-2 disabled:opacity-50"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            {isNavigatingBack ? (
+              <div className="spinner" style={{ width: 16, height: 16 }} />
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            )}
             Back to Exam
           </button>
           <button
-            onClick={() => setShowConfirm(true)}
-            className="px-8 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-success to-accent text-white hover:scale-[1.02] active:scale-[0.98] transition-all glow-success flex items-center gap-2"
+            onClick={handleOpenConfirm}
+            disabled={isOpeningConfirm || submitting || isNavigatingBack || navigatingToQuestion !== null}
+            className="px-8 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-success to-accent text-white hover:scale-[1.02] active:scale-[0.98] transition-all glow-success flex items-center gap-2 disabled:opacity-50"
           >
-            Submit Exam
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            {isOpeningConfirm ? (
+              <div className="spinner" style={{ width: 16, height: 16, borderTopColor: 'white' }} />
+            ) : (
+              <>
+                Submit Exam
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              </>
+            )}
           </button>
         </div>
       </main>

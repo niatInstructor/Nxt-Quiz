@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Exam {
   id: string;
@@ -10,6 +11,9 @@ interface Exam {
   status: string;
   capacity: number;
   participant_count: number;
+  waiting_count?: number;
+  active_count?: number;
+  submitted_count?: number;
   duration_seconds: number;
   starts_at: string | null;
 }
@@ -17,18 +21,27 @@ interface Exam {
 export default function LiveMonitor() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const router = useRouter();
+  
   const fetchExams = useCallback(async () => {
-    const res = await fetch("/api/admin/exams");
-    if (res.ok) {
-      const data = await res.json();
-      const live = (data.exams || []).filter(
-        (e: Exam) => e.status === "in_progress" || e.status === "waiting"
-      );
-      setExams(live);
+    try {
+      const res = await fetch("/api/admin/exams/live-stats");
+      
+      if (res.status === 403) {
+        router.push("/admin/login");
+        return;
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        setExams(data.exams || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch live stats:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -97,12 +110,27 @@ export default function LiveMonitor() {
                 </div>
 
                 <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-2 rounded-lg bg-warning/5 border border-warning/10 text-center">
+                      <p className="text-sm font-bold text-warning">{exam.waiting_count || 0}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase">Waiting</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-primary/5 border border-primary/10 text-center">
+                      <p className="text-sm font-bold text-primary">{exam.active_count || 0}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase">Active</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-success/5 border border-success/10 text-center">
+                      <p className="text-sm font-bold text-success">{exam.submitted_count || 0}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase">Done</p>
+                    </div>
+                  </div>
+
                   <div>
                     <div className="flex justify-between text-xs mb-1.5">
-                      <span className="text-muted-foreground">Capacity</span>
+                      <span className="text-muted-foreground font-medium text-[10px] uppercase">Total Enrollment</span>
                       <span className="text-foreground font-bold">{exam.participant_count} / {exam.capacity}</span>
                     </div>
-                    <div className="w-full h-2 bg-border rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-border/50 rounded-full overflow-hidden">
                       <div 
                         className={`h-full transition-all duration-1000 ${
                           exam.status === 'in_progress' ? 'bg-primary' : 'bg-warning'
@@ -117,8 +145,8 @@ export default function LiveMonitor() {
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       {Math.round(exam.duration_seconds / 60)} min
                     </div>
-                    <span className="text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                      Open Controls →
+                    <span className="text-primary font-bold">
+                      Control Exam →
                     </span>
                   </div>
                 </div>

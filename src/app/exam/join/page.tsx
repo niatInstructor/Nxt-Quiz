@@ -73,6 +73,15 @@ export default function JoinExam() {
           </span>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.push("/scores")}
+            className="text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2" />
+            </svg>
+            My Scores
+          </button>
           <span className="text-sm text-muted-foreground">{userName}</span>
           <button
             onClick={handleLogout}

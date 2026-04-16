@@ -59,9 +59,32 @@ export default function TakeExam({
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const [showNav, setShowNav] = useState(true);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
+
+  // Full screen management
+  const enterFullScreen = useCallback(() => {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleFullScreenChange = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullScreenChange);
+    // Initial enter
+    enterFullScreen();
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullScreenChange);
+    };
+  }, [enterFullScreen]);
 
   // Load exam data
   useEffect(() => {
@@ -582,6 +605,32 @@ export default function TakeExam({
           </button>
         )}
       </div>
+
+      {/* Full screen enforcement modal */}
+      {!isFullScreen && !loading && (
+        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden">
+          <div className="glass-card p-8 max-w-md w-full text-center animate-slide-up shadow-2xl border-primary/20">
+            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Full Screen Required</h2>
+            <p className="text-muted-foreground mb-8 text-sm">
+              To maintain the integrity of the examination, you must stay in full screen mode. Leaving full screen is recorded as an event.
+            </p>
+            <button
+              onClick={enterFullScreen}
+              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-lg hover:bg-primary-hover hover:scale-[1.02] active:scale-[0.98] transition-all glow-primary shadow-xl"
+            >
+              Enter Full Screen to Continue
+            </button>
+            <p className="mt-6 text-[10px] text-muted-foreground uppercase tracking-widest">
+              Standard Examination Protocol
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
