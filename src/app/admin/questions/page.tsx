@@ -25,6 +25,7 @@ export default function QuestionBank() {
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
   const [importing, setImporting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   const [form, setForm] = useState<Partial<Question>>({
@@ -57,33 +58,38 @@ export default function QuestionBank() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     const url = editingId ? `/api/admin/questions/${editingId}` : "/api/admin/questions";
     const method = editingId ? "PATCH" : "POST";
 
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    if (res.ok) {
-      await fetchQuestions();
-      setEditingId(null);
-      setShowAdd(false);
-      setForm({
-        topic: "React",
-        difficulty: "Basic",
-        question: "",
-        options: [
-          { id: "A", text: "" },
-          { id: "B", text: "" },
-          { id: "C", text: "" },
-          { id: "D", text: "" },
-        ],
-        correct_option_id: "A",
-        explanation: "",
-        tags: [],
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
       });
+
+      if (res.ok) {
+        await fetchQuestions();
+        setEditingId(null);
+        setShowAdd(false);
+        setForm({
+          topic: "React",
+          difficulty: "Basic",
+          question: "",
+          options: [
+            { id: "A", text: "" },
+            { id: "B", text: "" },
+            { id: "C", text: "" },
+            { id: "D", text: "" },
+          ],
+          correct_option_id: "A",
+          explanation: "",
+          tags: [],
+        });
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -362,9 +368,17 @@ export default function QuestionBank() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary-hover transition-all"
+                  disabled={submitting}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary-hover transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {editingId ? "Save Changes" : "Create Question"}
+                  {submitting ? (
+                    <>
+                      <div className="spinner" style={{ width: 14, height: 14, borderTopColor: "white", borderColor: "rgba(255,255,255,0.3)" }} />
+                      {editingId ? "Saving..." : "Creating..."}
+                    </>
+                  ) : (
+                    editingId ? "Save Changes" : "Create Question"
+                  )}
                 </button>
               </div>
             </form>

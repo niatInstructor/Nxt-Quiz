@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 export default function JoinExam() {
   const [examCode, setExamCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("");
   const router = useRouter();
@@ -53,6 +54,7 @@ export default function JoinExam() {
   };
 
   const handleLogout = async () => {
+    setLoggingOut(true);
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
@@ -74,9 +76,11 @@ export default function JoinExam() {
           <span className="text-sm text-muted-foreground">{userName}</span>
           <button
             onClick={handleLogout}
-            className="text-xs text-muted hover:text-danger transition-colors"
+            disabled={loggingOut}
+            className="text-xs text-muted hover:text-danger transition-colors flex items-center gap-2"
           >
-            Sign Out
+            {loggingOut && <div className="spinner" style={{ width: 10, height: 10 }} />}
+            {loggingOut ? "Signing out..." : "Sign Out"}
           </button>
         </div>
       </header>

@@ -62,10 +62,13 @@ export default function Login() {
           <button
             onClick={signInWithGoogle}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg"
+            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg border border-border/50"
           >
             {loading ? (
-              <div className="spinner" />
+              <span className="flex items-center justify-center gap-2">
+                <div className="spinner" style={{ width: 18, height: 18 }} />
+                Signing in...
+              </span>
             ) : (
               <>
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -90,6 +93,7 @@ export default function Login() {
               </>
             )}
           </button>
+
 
           <div className="mt-6 text-center">
             <p className="text-xs text-muted">
