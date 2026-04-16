@@ -67,7 +67,7 @@ export default function JoinExam() {
             <span className="text-white font-bold text-sm">R</span>
           </div>
           <span className="text-sm font-medium text-foreground">
-            React Exam
+            Nxt-Quiz
           </span>
         </div>
         <div className="flex items-center gap-4">

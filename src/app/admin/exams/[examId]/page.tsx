@@ -37,6 +37,10 @@ export default function ExamControl({
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ title: "", capacity: 0, durationMinutes: 0 });
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const router = useRouter();
 
   const fetchData = async () => {
@@ -45,6 +49,11 @@ export default function ExamControl({
       const data = await res.json();
       setExam(data.exam);
       setParticipants(data.participants || []);
+      setEditForm({
+        title: data.exam.title,
+        capacity: data.exam.capacity,
+        durationMinutes: Math.round(data.exam.duration_seconds / 60),
+      });
     }
     setLoading(false);
   };
@@ -76,6 +85,59 @@ export default function ExamControl({
     const res = await fetch(`/api/exam/${examId}/end`, { method: "POST" });
     if (res.ok) fetchData();
     setEnding(false);
+  };
+
+  const handleDeleteExam = async () => {
+    if (!confirm("PERMANENTLY DELETE this exam and all student attempts? This cannot be undone.")) return;
+    setDeleting(true);
+    const res = await fetch(`/api/admin/exams/${examId}`, { method: "DELETE" });
+    if (res.ok) {
+      router.push("/admin");
+    } else {
+      setDeleting(false);
+      alert("Failed to delete exam");
+    }
+  };
+
+  const handleUpdateExam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditing(true);
+    const res = await fetch(`/api/admin/exams/${examId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editForm),
+    });
+    if (res.ok) {
+      await fetchData();
+      setEditing(false);
+    } else {
+      setEditing(false);
+      alert("Failed to update exam");
+    }
+  };
+
+  const handleKick = async (userId: string, name: string) => {
+    if (!confirm(`Kick student "${name}" from the exam?`)) return;
+    setActionLoading(userId);
+    const res = await fetch(`/api/admin/exams/${examId}/kick`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.ok) fetchData();
+    setActionLoading(null);
+  };
+
+  const handleReset = async (userId: string, name: string) => {
+    if (!confirm(`Reset all answers and attempts for "${name}"? They will be able to start over.`)) return;
+    setActionLoading(userId);
+    const res = await fetch(`/api/admin/exams/${examId}/reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.ok) fetchData();
+    setActionLoading(null);
   };
 
   if (loading || !exam) {
@@ -115,6 +177,22 @@ export default function ExamControl({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setEditing(true)}
+            className="px-4 py-2.5 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+            Edit
+          </button>
+          <button
+            onClick={handleDeleteExam}
+            disabled={deleting}
+            className="px-4 py-2.5 rounded-xl text-sm font-medium text-danger hover:bg-danger/10 transition-all flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+          <div className="h-8 w-px bg-border mx-2" />
           {exam.status === "waiting" && (
             <button
               onClick={handleStart}
@@ -165,6 +243,64 @@ export default function ExamControl({
         </div>
       </div>
 
+      {/* Edit Modal */}
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="glass-card p-8 w-full max-w-md animate-slide-up">
+            <h2 className="text-xl font-bold text-foreground mb-6">Edit Exam Settings</h2>
+            <form onSubmit={handleUpdateExam} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Title</label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:border-primary transition-all"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Duration (min)</label>
+                  <input
+                    type="number"
+                    value={editForm.durationMinutes}
+                    onChange={e => setEditForm(prev => ({ ...prev, durationMinutes: parseInt(e.target.value) }))}
+                    className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:border-primary transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Capacity</label>
+                  <input
+                    type="number"
+                    value={editForm.capacity}
+                    onChange={e => setEditForm(prev => ({ ...prev, capacity: parseInt(e.target.value) }))}
+                    className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:border-primary transition-all"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-8">
+                <button
+                  type="button"
+                  onClick={() => setEditing(false)}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary-hover transition-all"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="glass-card p-5 text-center">
@@ -201,6 +337,7 @@ export default function ExamControl({
                 <th className="text-left p-4 text-muted-foreground font-medium">Email</th>
                 <th className="text-left p-4 text-muted-foreground font-medium">Status</th>
                 <th className="text-left p-4 text-muted-foreground font-medium">Joined At</th>
+                <th className="text-right p-4 text-muted-foreground font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -214,17 +351,44 @@ export default function ExamControl({
                       p.status === "waiting" ? "bg-warning/10 text-warning"
                         : p.status === "active" ? "bg-primary/10 text-primary"
                         : p.status === "submitted" ? "bg-success/10 text-success"
+                        : p.status === "kicked" ? "bg-danger/10 text-danger"
                         : "bg-muted/10 text-muted"
                     }`}>
                       {p.status}
                     </span>
                   </td>
                   <td className="p-4 text-muted-foreground text-xs">{new Date(p.joined_at).toLocaleString()}</td>
+                  <td className="p-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {actionLoading === p.user_id ? (
+                        <div className="spinner" style={{ width: 14, height: 14 }} />
+                      ) : (
+                        <>
+                          {p.status !== "submitted" && p.status !== "kicked" && (
+                            <button
+                              onClick={() => handleKick(p.user_id, p.profiles?.full_name || "Student")}
+                              className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider text-danger hover:bg-danger/10 transition-all"
+                              title="Kick from exam"
+                            >
+                              Kick
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleReset(p.user_id, p.profiles?.full_name || "Student")}
+                            className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider text-accent hover:bg-accent/10 transition-all"
+                            title="Reset attempt"
+                          >
+                            Reset
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
               {participants.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
                     No students have joined yet
                   </td>
                 </tr>

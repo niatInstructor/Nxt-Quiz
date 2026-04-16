@@ -18,7 +18,7 @@ export default function Header() {
           <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-lg">R</span>
           </div>
-          <h1 className="text-xl font-bold text-foreground">React Exam</h1>
+          <h1 className="text-xl font-bold text-foreground">Nxt-Quiz</h1>
         </div>
         <button
           onClick={onClickLogout}

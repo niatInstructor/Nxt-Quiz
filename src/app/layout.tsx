@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "React Proficiency Exam",
+  title: "Nxt-Quiz",
   description:
-    "A comprehensive React MCQ assessment platform for evaluating student proficiency across hooks, components, routing, state management, and more.",
+    "A comprehensive general-purpose MCQ assessment platform for evaluating proficiency across various subjects and technologies.",
 };
 
 export default function RootLayout({

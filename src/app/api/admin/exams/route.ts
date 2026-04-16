@@ -106,39 +106,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: examError.message }, { status: 500 });
   }
 
-  // Seed questions if needed
-  const { count: existingQCount } = await supabase
+  // Assign all current questions in the database to this exam
+  const { data: dbQuestions } = await supabase
     .from("questions")
-    .select("*", { count: "exact", head: true });
+    .select("id");
 
-  if (!existingQCount || existingQCount < 50) {
-    const questionInserts = questionsData.map((q: Record<string, unknown>) => ({
-      id: q.id,
-      topic: q.topic,
-      difficulty: q.difficulty,
-      question: q.question,
-      options: JSON.stringify(q.options),
-      correct_option_id: q.correctOptionId,
-      explanation: q.explanation,
-      tags: q.tags,
-    }));
-
-    await supabase
-      .from("questions")
-      .upsert(questionInserts, { onConflict: "id" });
-  }
-
-  // Assign all 50 questions to this exam
-  const examQuestions = questionsData.map(
-    (q: Record<string, unknown>, i: number) => ({
+  if (dbQuestions && dbQuestions.length > 0) {
+    const examQuestions = dbQuestions.map((q, i) => ({
       exam_id: exam.id,
       question_id: q.id,
       position: i + 1,
       points: 1,
-    }),
-  );
+    }));
 
-  await supabase.from("exam_questions").insert(examQuestions);
+    await supabase.from("exam_questions").insert(examQuestions);
+  }
 
   return NextResponse.json({
     examId: exam.id,

@@ -44,7 +44,7 @@ export default function Login() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold gradient-text mb-2">
-            React Proficiency Exam
+            Nxt-Quiz
           </h1>
           <p className="text-muted-foreground text-sm">
             Sign in with your Google account to begin

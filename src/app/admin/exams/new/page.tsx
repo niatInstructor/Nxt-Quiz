@@ -111,7 +111,7 @@ export default function CreateExam() {
         </h1>
         <p className="text-sm text-muted-foreground mb-8">
           Create a new exam session. Each section gets its own Exam ID. All
-          sections use the same 50-question bank with randomized order per
+          sections use the same global question bank with randomized order per
           student.
         </p>
 
@@ -135,7 +135,7 @@ export default function CreateExam() {
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Section A - React Proficiency Exam"
+                placeholder="e.g. Section A - Final Quiz"
                 className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
                 required
               />
@@ -180,7 +180,7 @@ export default function CreateExam() {
 
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 text-xs text-muted-foreground flex items-start gap-2">
               <svg className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <span>All 50 MCQ questions (25 theory + 25 coding) will be automatically assigned. Each student receives questions in a different random order.</span>
+              <span>All questions from the global bank will be automatically assigned. Each student receives questions in a different random order.</span>
             </div>
 
             <button

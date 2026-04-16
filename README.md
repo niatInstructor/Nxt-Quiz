@@ -1,4 +1,4 @@
-# React Proficiency Exam Platform
+# Nxt-Quiz
 
 A production-grade assessment platform built with **Next.js 16**, **Supabase**, and **Recharts** — designed for 300+ concurrent students.
 

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/browser";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { isValidStudentId, STUDENT_ID_ERROR, normalizeStudentId } from "@/lib/student-id";
 
 export default function Onboarding() {
   const [collegeId, setCollegeId] = useState("");
@@ -24,10 +25,10 @@ export default function Onboarding() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = collegeId.trim();
+    const trimmed = normalizeStudentId(collegeId);
 
-    if (trimmed.length < 3 || trimmed.length > 64) {
-      setError("Student College ID must be between 3 and 64 characters");
+    if (!isValidStudentId(trimmed)) {
+      setError(STUDENT_ID_ERROR);
       return;
     }
 
@@ -103,7 +104,7 @@ export default function Onboarding() {
                 className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
                 required
                 autoFocus
-                maxLength={64}
+                maxLength={11}
               />
               <p className="mt-2 text-xs text-muted">
                 This ID uniquely identifies you. It cannot be changed later.
