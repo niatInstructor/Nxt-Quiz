@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/browser";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isValidStudentId, STUDENT_ID_ERROR, STUDENT_ID_EXAMPLE, normalizeStudentId } from "@/lib/student-id";
+import { isValidStudentId, STUDENT_ID_ERROR, STUDENT_ID_EXAMPLE, normalizeStudentId, STUDENT_ID_PREFIX } from "@/lib/student-id";
 
 export default function Onboarding() {
   const [collegeId, setCollegeId] = useState("");
@@ -95,25 +95,33 @@ export default function Onboarding() {
               >
                 Student College ID
               </label>
-              <input
-                id="college-id"
-                type="text"
-                value={collegeId}
-                onChange={(e) => setCollegeId(e.target.value.toUpperCase())}
-                placeholder={`e.g. ${STUDENT_ID_EXAMPLE}`}
-                className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
-                required
-                autoFocus
-                maxLength={11}
-              />
-              <p className="mt-2 text-xs text-muted">
-                This ID uniquely identifies you. It cannot be changed later.
+              <div className="relative group">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/60 font-mono text-lg select-none">
+                  {STUDENT_ID_PREFIX}
+                </span>
+                <input
+                  id="college-id"
+                  type="text"
+                  value={collegeId}
+                  onChange={(e) => setCollegeId(e.target.value.toUpperCase())}
+                  placeholder={STUDENT_ID_EXAMPLE}
+                  className="w-full pl-24 pr-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all font-mono text-lg"
+                  required
+                  autoFocus
+                  maxLength={5}
+                />
+              </div>
+              <p className="mt-3 text-xs text-muted flex items-start gap-2">
+                <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                This ID uniquely identifies you. The prefix <strong>{STUDENT_ID_PREFIX}</strong> is already added.
               </p>
             </div>
 
             <button
               type="submit"
-              disabled={loading || collegeId.trim().length < 3}
+              disabled={loading || collegeId.trim().length < 1}
               className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed glow-primary"
             >
               {loading ? (
