@@ -51,11 +51,8 @@ export async function GET(
     )
     .eq("exam_id", examId);
 
-  // 3. Question analytics from the view
-  const { data: questionMetrics } = await supabase
-    .from("exam_question_analytics")
-    .select("*")
-    .eq("exam_id", examId);
+  // 3. (Removed) We compute analytics manually because the view uses `where public.is_admin()`, 
+  // which filters out results since `createAdminClient` bypasses auth (auth.uid() is null).
 
   // 4. Get full question details for this exam
   const { data: examQuestions } = await supabase
@@ -139,26 +136,6 @@ export async function GET(
     else passCount.failed++;
   });
 
-  // Topic performance
-  const topicMap = new Map<string, { total: number; correct: number; questions: number }>();
-  (questionMetrics || []).forEach((q) => {
-    const entry = topicMap.get(q.topic) || { total: 0, correct: 0, questions: 0 };
-    entry.total += Number(q.submitted_attempts) || 0;
-    entry.correct += Number(q.correct_count) || 0;
-    entry.questions++;
-    topicMap.set(q.topic, entry);
-  });
-
-  const topicPerformance = Array.from(topicMap.entries()).map(
-    ([topic, data]) => ({
-      topic,
-      avgCorrectPct:
-        data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0,
-      questionCount: data.questions,
-      totalAttempts: data.total,
-    }),
-  );
-
   // Score distribution (10 buckets)
   const ranges = [
     "0-10%", "10-20%", "20-30%", "30-40%", "40-50%",
@@ -171,37 +148,6 @@ export async function GET(
       (s) => s >= low && (i === 9 ? s <= high : s < high),
     ).length;
     return { range, count };
-  });
-
-  // Difficulty breakdown
-  const difficultyMap = new Map<string, { correct: number; total: number; questions: number }>();
-  (questionMetrics || []).forEach((q) => {
-    const entry = difficultyMap.get(q.difficulty) || { correct: 0, total: 0, questions: 0 };
-    entry.correct += Number(q.correct_count) || 0;
-    entry.total += Number(q.submitted_attempts) || 0;
-    entry.questions++;
-    difficultyMap.set(q.difficulty, entry);
-  });
-
-  const difficultyBreakdown = Array.from(difficultyMap.entries()).map(
-    ([difficulty, data]) => ({
-      difficulty,
-      avgCorrectPct: data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0,
-      questionCount: data.questions,
-    }),
-  );
-
-  // Per-question detailed breakdown with option selection counts
-  const answersByQuestion = new Map<string, { A: number; B: number; C: number; D: number; skipped: number; bookmarked: number }>();
-  allAnswers.forEach((ans) => {
-    const entry = answersByQuestion.get(ans.question_id) || { A: 0, B: 0, C: 0, D: 0, skipped: 0, bookmarked: 0 };
-    if (ans.selected_option_id) {
-      const opt = ans.selected_option_id as "A" | "B" | "C" | "D";
-      if (entry[opt] !== undefined) entry[opt]++;
-    }
-    if (ans.is_skipped) entry.skipped++;
-    if (ans.is_bookmarked) entry.bookmarked++;
-    answersByQuestion.set(ans.question_id, entry);
   });
 
   interface QuestionDetail {
@@ -217,17 +163,74 @@ export async function GET(
     tags: string[];
   }
 
+  // ---- COMPUTE QUESTION METRICS FROM SCRATCH ----
+  const submittedAttemptsIds = new Set(submittedAttempts.map(a => a.id));
+
+  // Map option IDs to specific keys 'A', 'B', 'C', 'D'
+  const optionLetters = ["A", "B", "C", "D", "E", "F"];
+  const optionIdToLetter = new Map<string, string>();
+  (examQuestions || []).forEach(eq => {
+    const q = eq.questions as unknown as QuestionDetail;
+    let parsedOptions = q?.options;
+    if (typeof parsedOptions === "string") {
+      try { parsedOptions = JSON.parse(parsedOptions); } catch { /* ignore */ }
+    }
+    if (Array.isArray(parsedOptions)) {
+      parsedOptions.forEach((opt, idx) => {
+        if (opt.id) {
+          optionIdToLetter.set(opt.id, optionLetters[idx] || "A");
+        }
+      });
+    }
+  });
+
+  // Per-question detailed breakdown with option selection counts
+  // We compute correct and wrong exclusively for SUBMITTED attempts
+  const answersByQuestion = new Map<string, { A: number; B: number; C: number; D: number; skipped: number; bookmarked: number; totalSubmittedAnswers: number }>();
+  allAnswers.forEach((ans) => {
+    const isSubmitted = submittedAttemptsIds.has(ans.attempt_id);
+    const entry = answersByQuestion.get(ans.question_id) || { A: 0, B: 0, C: 0, D: 0, skipped: 0, bookmarked: 0, totalSubmittedAnswers: 0 };
+    
+    if (isSubmitted) {
+      entry.totalSubmittedAnswers++;
+    }
+
+    if (ans.selected_option_id) {
+      const letter = optionIdToLetter.get(ans.selected_option_id) as "A" | "B" | "C" | "D" | undefined;
+      // We only type A|B|C|D here to match schema
+      if (isSubmitted && letter && entry[letter as keyof typeof entry] !== undefined) {
+        (entry as any)[letter]++;
+      }
+    }
+    if (isSubmitted && ans.is_skipped) entry.skipped++;
+    if (isSubmitted && ans.is_bookmarked) entry.bookmarked++;
+    answersByQuestion.set(ans.question_id, entry);
+  });
+
   const detailedQuestions = (examQuestions || []).map((eq) => {
     const q = eq.questions as unknown as QuestionDetail;
     const qId = q?.id || eq.question_id;
-    const metric = (questionMetrics || []).find((m) => m.question_id === qId);
-    const optionCounts = answersByQuestion.get(qId) || { A: 0, B: 0, C: 0, D: 0, skipped: 0, bookmarked: 0 };
-    const totalResponses = optionCounts.A + optionCounts.B + optionCounts.C + optionCounts.D;
+    const optionCounts = answersByQuestion.get(qId) || { A: 0, B: 0, C: 0, D: 0, skipped: 0, bookmarked: 0, totalSubmittedAnswers: 0 };
 
     let parsedOptions = q?.options;
     if (typeof parsedOptions === "string") {
       try { parsedOptions = JSON.parse(parsedOptions); } catch { /* keep as-is */ }
     }
+
+    const topic = q?.topic || "Uncategorized";
+    const difficulty = q?.difficulty || "Medium";
+
+    // Deduce correct counter directly
+    const correctLetter = q?.correct_option_id as "A" | "B" | "C" | "D" | undefined;
+    const correctCount = correctLetter ? (optionCounts[correctLetter as keyof typeof optionCounts] as number || 0) : 0;
+    
+    // total Responses that are NOT skipped
+    const answeredCount = optionCounts.A + optionCounts.B + optionCounts.C + optionCounts.D;
+    const wrongCount = answeredCount - correctCount;
+
+    const correctPercentage = submittedAttempts.length > 0
+      ? Math.round((correctCount / submittedAttempts.length) * 10000) / 100
+      : 0;
 
     return {
       position: eq.position,
@@ -235,19 +238,19 @@ export async function GET(
       questionId: qId,
       questionText: q?.question || "",
       codeSnippet: q?.code_snippet || null,
-      topic: q?.topic || metric?.topic || "",
-      difficulty: q?.difficulty || metric?.difficulty || "",
+      topic,
+      difficulty,
       questionType: q?.question_type || "theory",
       options: parsedOptions,
       correctOptionId: q?.correct_option_id || "",
       explanation: q?.explanation || "",
       tags: q?.tags || [],
-      correctPercentage: Number(metric?.correct_percentage) || 0,
-      correctCount: Number(metric?.correct_count) || 0,
-      wrongCount: totalResponses - (Number(metric?.correct_count) || 0),
+      correctPercentage,
+      correctCount,
+      wrongCount,
       skippedCount: optionCounts.skipped,
       bookmarkedCount: optionCounts.bookmarked,
-      submittedAttempts: Number(metric?.submitted_attempts) || 0,
+      submittedAttempts: submittedAttempts.length,
       optionBreakdown: {
         A: optionCounts.A,
         B: optionCounts.B,
@@ -256,6 +259,44 @@ export async function GET(
       },
     };
   });
+
+  // Topic performance
+  const topicMap = new Map<string, { total: number; correct: number; questions: number }>();
+  detailedQuestions.forEach((q) => {
+    const entry = topicMap.get(q.topic) || { total: 0, correct: 0, questions: 0 };
+    entry.total += q.submittedAttempts;
+    entry.correct += q.correctCount;
+    entry.questions++;
+    topicMap.set(q.topic, entry);
+  });
+
+  const topicPerformance = Array.from(topicMap.entries()).map(
+    ([topic, data]) => ({
+      topic,
+      avgCorrectPct:
+        data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0,
+      questionCount: data.questions,
+      totalAttempts: data.total,
+    }),
+  );
+
+  // Difficulty breakdown
+  const difficultyMap = new Map<string, { correct: number; total: number; questions: number }>();
+  detailedQuestions.forEach((q) => {
+    const entry = difficultyMap.get(q.difficulty) || { correct: 0, total: 0, questions: 0 };
+    entry.correct += q.correctCount;
+    entry.total += q.submittedAttempts;
+    entry.questions++;
+    difficultyMap.set(q.difficulty, entry);
+  });
+
+  const difficultyBreakdown = Array.from(difficultyMap.entries()).map(
+    ([difficulty, data]) => ({
+      difficulty,
+      avgCorrectPct: data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0,
+      questionCount: data.questions,
+    }),
+  );
 
   // Time analytics
   const timeData = submittedAttempts
