@@ -77,6 +77,8 @@ export default function TakeExam({
       setIsFullScreen(!!document.fullscreenElement);
     };
 
+    // Initial check
+    setIsFullScreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handleFullScreenChange);
     // Initial enter
     enterFullScreen();
@@ -127,28 +129,23 @@ export default function TakeExam({
       const remaining = Math.max(0, Math.floor((dueAt - serverNow) / 1000));
       setTimeLeft(remaining);
 
-      // Get questions (without correct answers — view excludes them)
+      // Get questions (without correct answers — view includes them)
       const { data: examQuestions } = await supabase
         .from("student_exam_questions")
-        .select("id, topic, difficulty, question, options, position, points")
+        .select("id, topic, difficulty, question_type, question, code_snippet, options, position, points")
         .eq("exam_id", examId)
         .order("position");
 
       if (examQuestions) {
-        // Fetch full question data from JSON for code snippets
-        const mcqResponse = await fetch("/api/questions");
-        const mcqData = mcqResponse.ok ? await mcqResponse.json() : [];
-
         const enriched = examQuestions.map((eq) => {
-          const fullQ = mcqData.find((m: Record<string, string>) => m.id === eq.id);
           return {
             ...eq,
             options:
               typeof eq.options === "string"
                 ? JSON.parse(eq.options)
                 : eq.options,
-            questionType: fullQ?.questionType || "theory",
-            codeSnippet: fullQ?.codeSnippet || null,
+            questionType: eq.question_type || "theory",
+            codeSnippet: eq.code_snippet || null,
           };
         });
 
@@ -292,6 +289,8 @@ export default function TakeExam({
     }
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1);
+    } else {
+      router.push(`/exam/${examId}/review`);
     }
   };
 

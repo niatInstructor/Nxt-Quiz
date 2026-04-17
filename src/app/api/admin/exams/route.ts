@@ -31,7 +31,12 @@ export async function GET(request: Request) {
     }),
   );
 
-  return NextResponse.json({ exams: enriched });
+  // Get total questions count for dashboard
+  const { count: questionsCount } = await supabase
+    .from("questions")
+    .select("*", { count: "exact", head: true });
+
+  return NextResponse.json({ exams: enriched, questionsCount: questionsCount || 0 });
 }
 
 // POST — create new exam
@@ -103,22 +108,6 @@ export async function POST(request: Request) {
 
   if (examError) {
     return NextResponse.json({ error: examError.message }, { status: 500 });
-  }
-
-  // Assign all current questions in the database to this exam
-  const { data: dbQuestions } = await supabase
-    .from("questions")
-    .select("id");
-
-  if (dbQuestions && dbQuestions.length > 0) {
-    const examQuestions = dbQuestions.map((q, i) => ({
-      exam_id: exam.id,
-      question_id: q.id,
-      position: i + 1,
-      points: 1,
-    }));
-
-    await supabase.from("exam_questions").insert(examQuestions);
   }
 
   return NextResponse.json({

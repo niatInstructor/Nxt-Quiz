@@ -39,14 +39,16 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { topic, difficulty, question, options, correct_option_id, explanation, tags } = body;
+  const { topic, difficulty, question_type, question, code_snippet, options, correct_option_id, explanation, tags } = body;
 
   const supabase = createAdminClient();
 
   const updates: {
     topic?: string;
     difficulty?: string;
+    question_type?: string;
     question?: string;
+    code_snippet?: string;
     options?: string;
     correct_option_id?: string;
     explanation?: string;
@@ -54,7 +56,9 @@ export async function PATCH(
   } = {};
   if (topic) updates.topic = topic;
   if (difficulty) updates.difficulty = difficulty;
+  if (question_type) updates.question_type = question_type;
   if (question) updates.question = question;
+  if (code_snippet !== undefined) updates.code_snippet = code_snippet;
   if (options) updates.options = typeof options === 'string' ? options : JSON.stringify(options);
   if (correct_option_id) updates.correct_option_id = correct_option_id;
   if (explanation) updates.explanation = explanation;

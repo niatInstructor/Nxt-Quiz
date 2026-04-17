@@ -24,6 +24,7 @@ interface ExamData {
   duration_seconds: number;
   starts_at: string | null;
   closes_at: string | null;
+  questionsCount?: number;
 }
 
 export default function ExamControl({
@@ -38,7 +39,9 @@ export default function ExamControl({
   const [starting, setStarting] = useState(false);
   const [ending, setEnding] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [editForm, setEditForm] = useState({ title: "", capacity: 0, durationMinutes: 0 });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +60,14 @@ export default function ExamControl({
       }
 
       const data = await res.json();
-      setExam(data.exam);
+      
+      // Fetch question count separately or if it's already in the API
+      // Since we modified the API to return question count (or we need to)
+      // For now, let's assume we can fetch it or we'll add it to the GET API
+      const qRes = await fetch(`/api/admin/exams/${examId}/questions-count`);
+      const { count } = qRes.ok ? await qRes.json() : { count: 0 };
+
+      setExam({ ...data.exam, questionsCount: count });
       setParticipants(data.participants || []);
       setEditForm({
         title: data.exam.title,
@@ -70,6 +80,37 @@ export default function ExamControl({
       setError("Failed to load exam details. Please check your connection.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const questionsToImport = Array.isArray(json) ? json : [json];
+      
+      const res = await fetch("/api/admin/questions/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questions: questionsToImport, examId }),
+      });
+
+      if (res.ok) {
+        alert("Questions uploaded and linked successfully!");
+        fetchData();
+      } else {
+        const d = await res.json();
+        alert("Upload failed: " + (d.error || "Unknown error"));
+      }
+    } catch {
+      alert("Invalid JSON file format.");
+    } finally {
+      setIsImporting(false);
+      e.target.value = "";
     }
   };
 
@@ -116,7 +157,7 @@ export default function ExamControl({
 
   const handleUpdateExam = async (e: React.FormEvent) => {
     e.preventDefault();
-    setEditing(true);
+    setIsSaving(true);
     const res = await fetch(`/api/admin/exams/${examId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -124,9 +165,10 @@ export default function ExamControl({
     });
     if (res.ok) {
       await fetchData();
-      setEditing(false);
+      setIsSaving(false);
+      setIsEditModalOpen(false);
     } else {
-      setEditing(false);
+      setIsSaving(false);
       alert("Failed to update exam");
     }
   };
@@ -216,7 +258,7 @@ export default function ExamControl({
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setEditing(true)}
+            onClick={() => setIsEditModalOpen(true)}
             className="px-4 py-2.5 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
@@ -234,7 +276,7 @@ export default function ExamControl({
           {exam.status === "waiting" && (
             <button
               onClick={handleStart}
-              disabled={starting || waitingCount === 0}
+              disabled={starting || waitingCount === 0 || (exam.questionsCount || 0) === 0}
               className="px-6 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-success to-accent text-white hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:hover:scale-100 glow-success flex items-center gap-2"
             >
               {starting ? (
@@ -282,7 +324,7 @@ export default function ExamControl({
       </div>
 
       {/* Edit Modal */}
-      {editing && (
+      {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="glass-card p-8 w-full max-w-md animate-slide-up">
             <h2 className="text-xl font-bold text-foreground mb-6">Edit Exam Settings</h2>
@@ -322,17 +364,17 @@ export default function ExamControl({
               <div className="flex gap-3 mt-8">
                 <button
                   type="button"
-                  onClick={() => setEditing(false)}
+                  onClick={() => setIsEditModalOpen(false)}
                   className="flex-1 py-3 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={editing}
+                  disabled={isSaving}
                   className="flex-1 py-3 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary-hover transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {editing ? (
+                  {isSaving ? (
                     <>
                       <div className="spinner" style={{ width: 14, height: 14, borderTopColor: "white", borderColor: "rgba(255,255,255,0.3)" }} />
                       Saving...
@@ -349,23 +391,61 @@ export default function ExamControl({
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="glass-card p-5 text-center">
+        <div className="glass-card p-5 text-center border-b-4 border-warning">
           <p className="text-3xl font-bold text-warning">{waitingCount}</p>
-          <p className="text-xs text-muted-foreground mt-1">Waiting</p>
+          <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider font-semibold">Waiting</p>
         </div>
-        <div className="glass-card p-5 text-center">
+        <div className="glass-card p-5 text-center border-b-4 border-primary">
           <p className="text-3xl font-bold text-primary">{activeCount}</p>
-          <p className="text-xs text-muted-foreground mt-1">Taking Exam</p>
+          <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider font-semibold">Taking Exam</p>
         </div>
-        <div className="glass-card p-5 text-center">
+        <div className="glass-card p-5 text-center border-b-4 border-success">
           <p className="text-3xl font-bold text-success">{submittedCount}</p>
-          <p className="text-xs text-muted-foreground mt-1">Submitted</p>
+          <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider font-semibold">Submitted</p>
         </div>
-        <div className="glass-card p-5 text-center">
-          <p className="text-3xl font-bold text-foreground">{participants.length}</p>
-          <p className="text-xs text-muted-foreground mt-1">Total / {exam.capacity}</p>
+        <div className="glass-card p-5 text-center border-b-4 border-accent">
+          <p className="text-3xl font-bold text-accent">{exam.questionsCount || 0}</p>
+          <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider font-semibold">Questions</p>
         </div>
       </div>
+
+      {/* Question Upload Section */}
+      {exam.status === "waiting" && (
+        <div className="glass-card p-6 mb-8 bg-gradient-to-br from-card to-card-hover border-primary/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-foreground mb-1">Exam Questions</h3>
+              <p className="text-sm text-muted-foreground">
+                {(exam.questionsCount || 0) > 0 
+                  ? `${exam.questionsCount} questions are currently loaded for this exam.`
+                  : "No questions loaded yet. You must upload a JSON file before starting."}
+              </p>
+            </div>
+            <label className={`cursor-pointer px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
+              isImporting ? "bg-muted text-muted-foreground" : "bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20"
+            }`}>
+              {isImporting ? (
+                <>
+                  <div className="spinner" style={{ width: 14, height: 14, borderTopColor: "white" }} />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                  Upload JSON Questions
+                </>
+              )}
+              <input type="file" accept=".json" onChange={handleImport} className="hidden" disabled={isImporting} />
+            </label>
+          </div>
+          {(exam.questionsCount || 0) === 0 && waitingCount > 0 && (
+            <div className="mt-4 p-3 rounded-lg bg-warning/10 border border-warning/20 flex items-center gap-2 text-warning text-xs">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+              <span>Students are waiting, but you cannot start until questions are uploaded.</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Participants table */}
       <div className="glass-card overflow-hidden">

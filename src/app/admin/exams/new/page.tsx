@@ -9,6 +9,7 @@ export default function CreateExam() {
   const [capacity, setCapacity] = useState(300);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [jsonFile, setJsonFile] = useState<File | null>(null);
   const [result, setResult] = useState<{ examCode: string; examId: string } | null>(
     null
   );
@@ -16,10 +17,28 @@ export default function CreateExam() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!jsonFile) {
+      setError("Please select a JSON questions file");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
+      // 1. Read the JSON file first to ensure it's valid
+      const text = await jsonFile.text();
+      let questions;
+      try {
+        questions = JSON.parse(text);
+        if (!Array.isArray(questions)) questions = [questions];
+      } catch {
+        setError("Invalid JSON file format");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Create the exam
       const res = await fetch("/api/admin/exams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -37,10 +56,27 @@ export default function CreateExam() {
         return;
       }
 
+      const examId = data.examId;
+
+      // 3. Import questions for this specific exam
+      const importRes = await fetch("/api/admin/questions/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questions, examId }),
+      });
+
+      if (!importRes.ok) {
+        const importData = await importRes.json();
+        setError("Exam created, but question upload failed: " + (importData.error || "Unknown error"));
+        setLoading(false);
+        return;
+      }
+
       setResult({ examCode: data.examCode, examId: data.examId });
       setLoading(false);
-    } catch {
-      setError("Network error");
+    } catch (err) {
+      console.error(err);
+      setError("Network error occurred during creation");
       setLoading(false);
     }
   };
@@ -110,9 +146,7 @@ export default function CreateExam() {
           Create New Exam
         </h1>
         <p className="text-sm text-muted-foreground mb-8">
-          Create a new exam session. Each section gets its own Exam ID. All
-          sections use the same global question bank with randomized order per
-          student.
+          Create a new exam session. You must upload a specific JSON file of questions to be used exclusively for this exam. Students will receive these questions in a randomized order.
         </p>
 
         <div className="glass-card p-8">
@@ -178,14 +212,41 @@ export default function CreateExam() {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 text-xs text-muted-foreground flex items-start gap-2">
-              <svg className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <span>All questions from the global bank will be automatically assigned. Each student receives questions in a different random order.</span>
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 text-xs text-muted-foreground flex flex-col gap-3">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>Upload the question JSON file. Each student receives questions in a different random order.</span>
+              </div>
+              
+              <div className="mt-1">
+                <label className={`cursor-pointer flex items-center gap-3 p-3 rounded-lg border-2 border-dashed transition-all ${
+                  jsonFile ? "border-success/50 bg-success/5 text-success" : "border-border hover:border-primary/50 bg-background"
+                }`}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${jsonFile ? "bg-success text-white" : "bg-primary/10 text-primary"}`}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold truncate">
+                      {jsonFile ? jsonFile.name : "Select Questions JSON"}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {jsonFile ? `${(jsonFile.size / 1024).toFixed(1)} KB` : "Mandatory file upload"}
+                    </p>
+                  </div>
+                  <input 
+                    type="file" 
+                    accept=".json" 
+                    onChange={(e) => setJsonFile(e.target.files?.[0] || null)}
+                    className="hidden" 
+                    required 
+                  />
+                </label>
+              </div>
             </div>
 
             <button
               type="submit"
-              disabled={loading || !title.trim()}
+              disabled={loading || !title.trim() || !jsonFile}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
             >
               {loading ? (

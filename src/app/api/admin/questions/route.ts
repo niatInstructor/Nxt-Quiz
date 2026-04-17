@@ -12,7 +12,16 @@ export async function GET(request: Request) {
 
   const { data: questions, error } = await supabase
     .from("questions")
-    .select("*")
+    .select(`
+      *,
+      exam_questions (
+        exams (
+          id,
+          title,
+          exam_code
+        )
+      )
+    `)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -30,7 +39,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { topic, difficulty, question, options, correct_option_id, explanation, tags } = body;
+  const { topic, difficulty, question_type, question, code_snippet, options, correct_option_id, explanation, tags } = body;
 
   const supabase = createAdminClient();
 
@@ -39,13 +48,13 @@ export async function POST(request: Request) {
     .insert({
       topic,
       difficulty,
+      question_type: question_type || 'theory',
       question,
+      code_snippet: code_snippet || null,
       options: typeof options === 'string' ? options : JSON.stringify(options),
       correct_option_id,
       explanation,
       tags,
-      // Note: If you have columns for code_snippet and question_type in your DB
-      // they should be included here. Based on previous code, they might be in the JSON.
     })
     .select()
     .single();

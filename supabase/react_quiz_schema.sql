@@ -53,7 +53,9 @@ create table if not exists public.questions (
   id text primary key,
   topic text not null,
   difficulty question_difficulty not null,
+  question_type text not null default 'theory',
   question text not null,
+  code_snippet text,
   options jsonb not null,
   correct_option_id text not null check (correct_option_id in ('A', 'B', 'C', 'D')),
   explanation text not null,
@@ -367,7 +369,9 @@ select
   q.id,
   q.topic,
   q.difficulty,
+  q.question_type,
   q.question,
+  q.code_snippet,
   q.options,
   q.tags
 from public.exam_questions eq

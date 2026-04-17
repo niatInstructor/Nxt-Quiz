@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   const { data: exam } = await admin
     .from("exams")
-    .select("id, status, capacity")
+    .select("id, status, capacity, starts_at, closes_at")
     .eq("exam_code", examCode.toUpperCase())
     .single();
 
@@ -45,9 +45,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid exam code" }, { status: 404 });
   }
 
-  if (exam.status !== "waiting") {
+  // Allow joining if status is 'waiting' OR ('in_progress' and within 10 minutes of starts_at)
+  const isWithinJoinWindow = 
+    exam.status === "waiting" || 
+    (exam.status === "in_progress" && 
+     exam.starts_at && 
+     (new Date().getTime() - new Date(exam.starts_at).getTime()) <= 10 * 60 * 1000);
+
+  if (!isWithinJoinWindow) {
+    const errorMsg = exam.status === "in_progress" 
+      ? "The join window for this exam has closed (10-minute limit exceeded)."
+      : "This exam is not accepting new participants.";
     return NextResponse.json(
-      { error: "This exam is not accepting new participants" },
+      { error: errorMsg },
       { status: 400 }
     );
   }
@@ -82,14 +92,36 @@ export async function POST(request: Request) {
   }
 
   // Join — use admin client to insert (student doesn't have INSERT policy)
-  const { error } = await admin.from("exam_participants").insert({
+  const participantStatus = exam.status === "in_progress" ? "active" : "waiting";
+  const { error: joinError } = await admin.from("exam_participants").insert({
     exam_id: exam.id,
     user_id: user.id,
-    status: "waiting",
+    status: participantStatus,
+    started_at: exam.status === "in_progress" ? new Date().toISOString() : null,
   });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (joinError) {
+    return NextResponse.json({ error: joinError.message }, { status: 500 });
+  }
+
+  // If joining an in-progress exam, create an attempt immediately
+  if (exam.status === "in_progress") {
+    // Get total points for max_score
+    const { data: qStats } = await admin
+      .from("exam_questions")
+      .select("points")
+      .eq("exam_id", exam.id);
+    
+    const maxScore = qStats?.reduce((sum, q) => sum + (q.points || 0), 0) || 0;
+
+    await admin.from("attempts").insert({
+      exam_id: exam.id,
+      user_id: user.id,
+      server_started_at: new Date().toISOString(),
+      server_due_at: exam.closes_at,
+      status: "active",
+      max_score: maxScore,
+    });
   }
 
   return NextResponse.json({ examId: exam.id });

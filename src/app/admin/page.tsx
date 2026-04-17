@@ -16,6 +16,7 @@ interface Exam {
 
 export default function AdminDashboard() {
   const [exams, setExams] = useState<Exam[]>([]);
+  const [questionsCount, setQuestionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,6 +25,7 @@ export default function AdminDashboard() {
       if (res.ok) {
         const data = await res.json();
         setExams(data.exams || []);
+        setQuestionsCount(data.questionsCount || 0);
       }
       setLoading(false);
     };
@@ -70,12 +72,13 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-5 gap-4 mb-8">
         {[
           { label: "Active", count: grouped.in_progress.length, color: "primary" },
           { label: "Waiting", count: grouped.waiting.length, color: "warning" },
           { label: "Draft", count: grouped.draft.length, color: "muted" },
           { label: "Closed", count: grouped.closed.length, color: "success" },
+          { label: "Questions", count: questionsCount, color: "accent" },
         ].map((s) => (
           <div key={s.label} className="glass-card p-5">
             <p className={`text-3xl font-bold text-${s.color}`}>{s.count}</p>
