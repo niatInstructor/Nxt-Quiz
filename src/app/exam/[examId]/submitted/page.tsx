@@ -216,7 +216,7 @@ export default function Submitted({
                 <p
                   className={`font-black text-xl uppercase tracking-wider ${isPass ? "text-success" : "text-danger"}`}
                 >
-                  {isPass ? "OH YOU PASSED!" : "NEED IMPROVEMENTS BRO/SIS"}
+                  {isPass ? "OH YOU PASSED!" : "NEED IMPROVEMENTS :-)"}
                 </p>
               </div>
             </div>
