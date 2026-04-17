@@ -79,3 +79,31 @@ export async function DELETE(request: Request) {
 
   return NextResponse.json({ success: true });
 }
+
+// PATCH — update a student's profile
+export async function PATCH(request: Request) {
+  const cookies = request.headers.get("cookie") || "";
+  if (!cookies.includes("admin_session=authenticated")) {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+
+  try {
+    const { userId, full_name, student_college_id } = await request.json();
+    if (!userId) {
+      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ full_name, student_college_id })
+      .eq("id", userId);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

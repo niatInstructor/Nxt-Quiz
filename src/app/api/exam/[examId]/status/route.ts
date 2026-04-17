@@ -11,7 +11,7 @@ export async function GET(
 
   const { data: exam } = await supabase
     .from("exams")
-    .select("title, status, capacity")
+    .select("title, status, capacity, duration_seconds")
     .eq("id", examId)
     .single();
 
@@ -29,6 +29,7 @@ export async function GET(
     title: exam.title,
     status: exam.status,
     capacity: exam.capacity,
+    durationSeconds: exam.duration_seconds,
     participantCount: count || 0,
   });
 }

@@ -98,8 +98,8 @@ export async function POST(request: Request) {
     .insert({
       exam_code: examCode,
       title,
-      duration_seconds: (durationMinutes || 40) * 60,
-      capacity: capacity || 300,
+      duration_seconds: durationMinutes * 60,
+      capacity: capacity,
       status: "waiting",
       created_by: adminId,
     })

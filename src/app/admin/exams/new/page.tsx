@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 
 export default function CreateExam() {
   const [title, setTitle] = useState("");
-  const [duration, setDuration] = useState(40);
-  const [capacity, setCapacity] = useState(300);
+  const [duration, setDuration] = useState<number | string>("");
+  const [capacity, setCapacity] = useState<number | string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [jsonFile, setJsonFile] = useState<File | null>(null);
@@ -44,8 +44,8 @@ export default function CreateExam() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          durationMinutes: duration,
-          capacity,
+          durationMinutes: Number(duration),
+          capacity: Number(capacity),
         }),
       });
 
@@ -187,10 +187,11 @@ export default function CreateExam() {
                   id="duration"
                   type="number"
                   value={duration}
-                  onChange={(e) => setDuration(Number(e.target.value))}
+                  onChange={(e) => setDuration(e.target.value === "" ? "" : Number(e.target.value))}
                   min={5}
                   max={180}
                   className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
+                  required
                 />
               </div>
               <div>
@@ -204,10 +205,11 @@ export default function CreateExam() {
                   id="capacity"
                   type="number"
                   value={capacity}
-                  onChange={(e) => setCapacity(Number(e.target.value))}
+                  onChange={(e) => setCapacity(e.target.value === "" ? "" : Number(e.target.value))}
                   min={1}
                   max={1000}
                   className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
+                  required
                 />
               </div>
             </div>

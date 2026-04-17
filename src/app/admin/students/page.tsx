@@ -20,6 +20,11 @@ export default function StudentsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
 
+  // Edit State
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: "", student_college_id: "" });
+  const [isSaving, setIsSaving] = useState(false);
+
   const fetchStudents = useCallback(async () => {
     const res = await fetch("/api/admin/students");
     if (res.ok) {
@@ -62,6 +67,45 @@ export default function StudentsPage() {
       setStudents((prev) => prev.filter((s) => s.id !== userId));
     }
     setDeletingId(null);
+  };
+
+  const handleEditClick = (student: Student) => {
+    setEditingStudent(student);
+    setEditForm({
+      full_name: student.full_name || "",
+      student_college_id: student.student_college_id || "",
+    });
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    
+    setIsSaving(true);
+    const res = await fetch("/api/admin/students", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: editingStudent.id,
+        full_name: editForm.full_name,
+        student_college_id: editForm.student_college_id,
+      }),
+    });
+
+    if (res.ok) {
+      // Update local state
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === editingStudent.id
+            ? { ...s, full_name: editForm.full_name, student_college_id: editForm.student_college_id }
+            : s
+        )
+      );
+      setEditingStudent(null);
+    } else {
+      alert("Failed to update student details.");
+    }
+    setIsSaving(false);
   };
 
   const filtered = students.filter((s) => {
@@ -150,6 +194,12 @@ export default function StudentsPage() {
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleEditClick(s)}
+                        className="px-3 py-1 rounded-lg text-xs font-medium text-warning hover:bg-warning/10 transition-all"
+                      >
+                        Edit
+                      </button>
                       <Link
                         href={`/admin/students/${s.id}`}
                         className="px-3 py-1 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-all"
@@ -181,6 +231,66 @@ export default function StudentsPage() {
           </table>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="glass-card p-8 w-full max-w-md animate-slide-up">
+            <h2 className="text-xl font-bold text-foreground mb-6">Edit Student Profile</h2>
+            
+            <div className="mb-6 p-4 rounded-xl bg-background border border-border">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Email (Read Only)</p>
+              <p className="text-sm font-mono text-muted">{editingStudent.email}</p>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={editForm.full_name}
+                  onChange={e => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:border-primary transition-all"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">College ID</label>
+                <input
+                  type="text"
+                  value={editForm.student_college_id}
+                  onChange={e => setEditForm(prev => ({ ...prev, student_college_id: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:border-primary transition-all uppercase font-mono"
+                  required
+                />
+              </div>
+              <div className="flex gap-3 mt-8">
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary-hover transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="spinner" style={{ width: 14, height: 14, borderTopColor: "white", borderColor: "rgba(255,255,255,0.3)" }} />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

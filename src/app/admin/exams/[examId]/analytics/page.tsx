@@ -471,79 +471,25 @@ export default function Analytics({
       {/* ═══════════════════════ TAB: OVERVIEW ═══════════════════════ */}
       {activeTab === "overview" && (
         <div className="space-y-8 animate-fade-in">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* Compact Metrics Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-6 glass-card px-6 py-4 rounded-2xl w-full">
             {[
-              {
-                label: "Avg Score",
-                value: `${summary.avgScore}/${summary.maxPossible}`,
-                color: "primary",
-                sub: `${summary.maxPossible > 0 ? Math.round((summary.avgScore / summary.maxPossible) * 100) : 0}%`,
-              },
-              {
-                label: "Median Score",
-                value: `${summary.medianScore}`,
-                color: "secondary",
-                sub: "middle value",
-              },
-              {
-                label: "Highest",
-                value: `${summary.highestScore}`,
-                color: "success",
-                sub: `${summary.maxPossible > 0 ? Math.round((summary.highestScore / summary.maxPossible) * 100) : 0}%`,
-              },
-              {
-                label: "Lowest",
-                value: `${summary.lowestScore}`,
-                color: "danger",
-                sub: `${summary.maxPossible > 0 ? Math.round((summary.lowestScore / summary.maxPossible) * 100) : 0}%`,
-              },
-              {
-                label: "Pass Rate",
-                value: `${summary.passRate}%`,
-                color: "accent",
-                sub: `≥40% to pass`,
-              },
-              {
-                label: "Submitted",
-                value: `${summary.totalSubmitted}`,
-                color: "success",
-                sub: `of ${summary.totalParticipants}`,
-              },
-              {
-                label: "Completion",
-                value: `${summary.completionRate}%`,
-                color: "warning",
-                sub: "submitted / joined",
-              },
-              {
-                label: "Total Questions",
-                value: `${summary.totalQuestions}`,
-                color: "foreground",
-                sub: `${summary.maxPossible} pts total`,
-              },
-              {
-                label: "Registered",
-                value: `${summary.totalParticipants}`,
-                color: "muted-foreground",
-                sub: `cap ${examMeta.capacity}`,
-              },
-              {
-                label: "Avg Time",
-                value: formatTime(timeAnalytics.avgTimeSeconds),
-                color: "primary",
-                sub: `of ${Math.round(examMeta.durationSeconds / 60)}m`,
-              },
-            ].map((s) => (
-              <div
-                key={s.label}
-                className="glass-card p-4 text-center group hover:border-border-hover transition-all"
-              >
-                <p className={`text-xl font-bold text-${s.color}`}>{s.value}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider font-semibold">
-                  {s.label}
-                </p>
-                <p className="text-[10px] text-muted mt-0.5">{s.sub}</p>
+              { label: "Avg Score", value: `${summary.avgScore}/${summary.maxPossible}`, color: "text-primary", sub: `${summary.maxPossible > 0 ? Math.round((summary.avgScore / summary.maxPossible) * 100) : 0}%` },
+              { label: "High Score", value: `${summary.highestScore}`, color: "text-success", sub: `${summary.maxPossible > 0 ? Math.round((summary.highestScore / summary.maxPossible) * 100) : 0}%` },
+              { label: "Pass Rate", value: `${summary.passRate}%`, color: "text-accent", sub: `≥40% to pass` },
+              { label: "Submitted", value: `${summary.totalSubmitted}`, color: "text-success", sub: `of ${summary.totalParticipants}` },
+              { label: "Completion", value: `${summary.completionRate}%`, color: "text-warning", sub: "submitted/joined" },
+              { label: "Avg Time", value: formatTime(timeAnalytics.avgTimeSeconds), color: "text-primary", sub: `of ${Math.round(examMeta.durationSeconds / 60)}m` },
+            ].map((s, i, arr) => (
+              <div key={s.label} className="flex items-center gap-6">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">{s.label}</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-xl font-bold leading-none ${s.color}`}>{s.value}</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">{s.sub}</span>
+                  </div>
+                </div>
+                {i < arr.length - 1 && <div className="hidden lg:block w-px h-8 bg-border/60" />}
               </div>
             ))}
           </div>

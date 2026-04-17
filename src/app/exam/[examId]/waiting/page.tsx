@@ -12,7 +12,8 @@ export default function WaitingRoom({
   const { examId } = use(params);
   const [examTitle, setExamTitle] = useState("");
   const [participantCount, setParticipantCount] = useState(0);
-  const [capacity, setCapacity] = useState(300);
+  const [capacity, setCapacity] = useState<number | null>(null);
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
   const router = useRouter();
 
   const fetchExamData = useCallback(async () => {
@@ -21,7 +22,8 @@ export default function WaitingRoom({
     if (res.ok) {
       const data = await res.json();
       setExamTitle(data.title || "");
-      setCapacity(data.capacity || 300);
+      setCapacity(data.capacity);
+      setDurationMinutes(data.durationSeconds ? Math.round(data.durationSeconds / 60) : null);
       setParticipantCount(data.participantCount || 0);
 
       if (data.status === "in_progress") {
@@ -108,7 +110,7 @@ export default function WaitingRoom({
               <p className="text-xs text-muted-foreground mt-1">Students Joined</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-muted-foreground">{capacity}</p>
+              <p className="text-3xl font-bold text-muted-foreground">{capacity !== null ? capacity : "—"}</p>
               <p className="text-xs text-muted-foreground mt-1">Capacity</p>
             </div>
           </div>
@@ -117,7 +119,7 @@ export default function WaitingRoom({
           <div className="w-full h-2 bg-border rounded-full overflow-hidden mb-6">
             <div
               className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500"
-              style={{ width: `${Math.min((participantCount / capacity) * 100, 100)}%` }}
+              style={{ width: `${Math.min((participantCount / (capacity || 1)) * 100, 100)}%` }}
             />
           </div>
 
@@ -147,7 +149,7 @@ export default function WaitingRoom({
             </li>
             <li className="flex items-start gap-2">
               <svg className="w-4 h-4 text-success mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              You have 40 minutes once the exam begins
+              {durationMinutes !== null ? `You have ${durationMinutes} minutes once the exam begins` : "You have a limited time once the exam begins"}
             </li>
             <li className="flex items-start gap-2">
               <svg className="w-4 h-4 text-success mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
