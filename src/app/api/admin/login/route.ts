@@ -66,19 +66,19 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const adminClient = createAdminClient();
 
-  // 2. Sync Admin Account (Local Only)
-  if (process.env.NODE_ENV !== "production") {
+  // 2. Auto-Sync Admin Account to Supabase Auth
+  if (true) {
     const { data: users } = await adminClient.auth.admin.listUsers();
     const existingAdmin = users.users.find(u => u.email === adminEmail);
 
     if (existingAdmin) {
-      console.log("Local Dev: Admin exists, syncing password...");
+      console.log("System DB Sync: Admin exists, auto-syncing password...");
       await adminClient.auth.admin.updateUserById(existingAdmin.id, { 
         password: envPwd,
         email_confirm: true 
       });
     } else {
-      console.log("Local Dev: Creating fresh admin account...");
+      console.log("System DB Sync: Creating fresh admin account in Auth...");
       const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
         email: adminEmail,
         password: envPwd,
