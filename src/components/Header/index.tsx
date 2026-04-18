@@ -2,6 +2,8 @@
 import { createClient } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 export default function Header() {
   const router = useRouter();
 
@@ -20,12 +22,15 @@ export default function Header() {
           </div>
           <h1 className="text-xl font-bold text-foreground">Nxt-Quiz</h1>
         </div>
-        <button
-          onClick={onClickLogout}
-          className="px-5 py-2 text-sm font-medium text-muted-foreground hover:text-danger border border-border rounded-xl hover:border-danger/30 transition-all"
-        >
-          Sign Out
-        </button>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <button
+            onClick={onClickLogout}
+            className="px-5 py-2 text-sm font-medium text-muted-foreground hover:text-danger border border-border rounded-xl hover:border-danger/30 transition-all"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
     </header>
   );

@@ -19,6 +19,25 @@
   --muted-foreground: #6b7280;
 }
 
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #09090b;
+  --card-hover: #27272a;
+  --border: #27272a;
+  --border-hover: #3f3f46;
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
+  --primary-glow: rgba(99, 102, 241, 0.15);
+  --secondary: #8b5cf6;
+  --accent: #06b6d4;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -61,8 +80,8 @@ button:disabled {
 
 /* Card */
 .glass-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
@@ -93,15 +112,15 @@ button:disabled {
 
 /* Code block styling */
 .code-block {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--card-hover);
+  border: 1px solid var(--border);
   border-radius: 12px;
   font-family: var(--font-geist-mono), 'Fira Code', monospace;
   font-size: 13px;
   line-height: 1.6;
   overflow-x: auto;
   padding: 20px;
-  color: #1e293b;
+  color: var(--foreground);
   tab-size: 2;
 }
 
@@ -153,8 +172,8 @@ button:disabled {
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid #e5e7eb;
-  border-top-color: #4f46e5;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -200,9 +219,9 @@ button:disabled {
 }
 
 .q-dot.unanswered {
-  background: #f9fafb;
-  color: #9ca3af;
-  border-color: #e5e7eb;
+  background: var(--card-hover);
+  color: var(--muted);
+  border-color: var(--border);
 }
 
 .q-dot:hover {
@@ -211,7 +230,7 @@ button:disabled {
 
 /* Background */
 .mesh-gradient {
-  background: linear-gradient(135deg, #f8faff 0%, #f0f4ff 25%, #faf5ff 50%, #f0fdfa 75%, #ffffff 100%);
+  background: linear-gradient(135deg, var(--background) 0%, var(--card) 25%, var(--background) 50%, var(--card) 75%, var(--background) 100%);
 }
 
 /* Waiting room dots animation */

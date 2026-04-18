@@ -25,7 +25,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md animate-slide-up">
+      <div className="w-full max-w-md bg-card rounded-2xl shadow-xl overflow-hidden glass-card p-8 relative">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-secondary mb-4 glow-primary">
@@ -43,9 +43,7 @@ export default function Login() {
               />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">
-            Nxt-Quiz
-          </h1>
+          <h1 className="text-3xl font-bold gradient-text mb-2">Nxt-Quiz</h1>
           <p className="text-muted-foreground text-sm">
             Sign in with your Google account to begin
           </p>
@@ -93,7 +91,6 @@ export default function Login() {
               </>
             )}
           </button>
-
 
           <div className="mt-6 text-center">
             <p className="text-xs text-muted">
