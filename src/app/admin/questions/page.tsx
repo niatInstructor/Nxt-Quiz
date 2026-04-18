@@ -175,7 +175,7 @@ export default function QuestionBank() {
     setShowAdd(true);
   };
 
-  const [selectedExamName, setSelectedExamName] = useState<string>("");
+  const [selectedExamName, setSelectedExamName] = useState<string>("All");
 
   const filtered = questions.filter(
     (q) =>
@@ -185,16 +185,23 @@ export default function QuestionBank() {
 
   const groupedQuestions = filtered.reduce(
     (acc, q) => {
-      let examLabel = "Unassigned / Global Pool";
-      if (q.exam_questions && q.exam_questions.length > 0) {
-        const parentExam = q.exam_questions[0].exams;
-        if (parentExam) {
-          examLabel = `${parentExam.title} (${parentExam.exam_code})`;
-        }
+      if (!q.exam_questions || q.exam_questions.length === 0) {
+        const label = "Unassigned / Global Pool";
+        if (!acc[label]) acc[label] = [];
+        acc[label].push(q);
+      } else {
+        q.exam_questions.forEach((eq) => {
+          const parentExam = eq.exams;
+          const label = parentExam
+            ? `${parentExam.title} (${parentExam.exam_code})`
+            : "Unassigned / Global Pool";
+          if (!acc[label]) acc[label] = [];
+          // Avoid duplicate push if eq.exams is somehow missing but eq exists
+          if (!acc[label].find((existing) => existing.id === q.id)) {
+            acc[label].push(q);
+          }
+        });
       }
-
-      if (!acc[examLabel]) acc[examLabel] = [];
-      acc[examLabel].push(q);
       return acc;
     },
     {} as Record<string, Question[]>,
@@ -219,11 +226,11 @@ export default function QuestionBank() {
             {questions.length} questions available
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto">
           <select
             value={selectedExamName}
             onChange={(e) => setSelectedExamName(e.target.value)}
-            className="px-4 py-2 rounded-xl bg-background border border-border text-sm font-semibold focus:outline-none focus:border-primary transition-all w-64 shadow-sm"
+            className="px-4 py-2 rounded-xl bg-background border border-border text-sm font-semibold focus:outline-none focus:border-primary transition-all w-full sm:w-64 shadow-sm"
           >
             <option value="" disabled>
               Select an Exam...
@@ -240,7 +247,7 @@ export default function QuestionBank() {
             placeholder="Search questions..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="px-4 py-2 rounded-xl bg-background border border-border text-sm w-48 focus:outline-none focus:border-primary transition-all shadow-sm"
+            className="px-4 py-2 rounded-xl bg-background border border-border text-sm w-full sm:w-48 focus:outline-none focus:border-primary transition-all shadow-sm"
           />
           {questions.length > 0 && (
             <button

@@ -1,8 +1,8 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/browser";
-import { useState, useEffect, useCallback, useRef, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useRef, use, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface Question {
   id: string;
@@ -46,23 +46,119 @@ function shuffleArray<T>(arr: T[], seed: string): T[] {
   return shuffled;
 }
 
-export default function TakeExam({
-  params,
-}: {
-  params: Promise<{ examId: string }>;
-}) {
-  const { examId } = use(params);
+function TakeExamContent({ examId }: { examId: string }) {
+  const searchParams = useSearchParams();
+  const startQuestionId = searchParams.get("q");
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [serverDrift, setServerDrift] = useState(0); // diff between server and local clock
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  // BUG-05: Use ref to avoid stale closure in timer callback
+  const attemptIdRef = useRef<string | null>(null);
+
+  // Smart Navigation: Jump to specific question when query param 'q' changes
+  useEffect(() => {
+    if (startQuestionId && questions.length > 0) {
+      const index = questions.findIndex((q) => q.id === startQuestionId);
+      if (index !== -1) {
+         
+        setCurrentIndex(index);
+      }
+    }
+  }, [startQuestionId, questions]);
+
   const [showNav, setShowNav] = useState(true);
+  const [showTabWarning, setShowTabWarning] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
+
+  // Proctoring: Detect Tab Switch
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.hidden && attemptId && !loading) {
+        // Only trigger if attempt is active and loaded
+        setShowTabWarning(true);
+        try {
+        // SEC-11: No client-supplied attemptId — server derives it from session
+          await fetch(`/api/exam/${examId}/proctor`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          });
+        } catch (err) {
+          console.error("Failed to report proctoring event:", err);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [attemptId, examId, loading]);
+
+  // Realtime subscription for time extensions
+  useEffect(() => {
+    if (!attemptId) return;
+    const supabase = createClient();
+
+    // 1. Listen to personal attempt updates
+    const attemptChannel = supabase
+      .channel(`attempt-realtime-${attemptId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "attempts",
+          filter: `id=eq.${attemptId}`,
+        },
+        (payload) => {
+          const newDueAt = payload.new.server_due_at;
+          if (newDueAt) {
+            const dueAtMs = new Date(newDueAt).getTime();
+            const nowMs = Date.now() + serverDrift;
+            const remaining = Math.max(0, Math.floor((dueAtMs - nowMs) / 1000));
+            setTimeLeft(remaining);
+            console.log("⏰ Time extended (Personal)! New remaining:", remaining);
+          }
+        }
+      )
+      .subscribe();
+
+    // 2. Listen to global exam updates (Double Check)
+    const examChannel = supabase
+      .channel(`exam-realtime-global-${examId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "exams",
+          filter: `id=eq.${examId}`,
+        },
+        (payload) => {
+          const newClosesAt = payload.new.closes_at;
+          if (newClosesAt) {
+            const dueAtMs = new Date(newClosesAt).getTime();
+            const nowMs = Date.now() + serverDrift;
+            const remaining = Math.max(0, Math.floor((dueAtMs - nowMs) / 1000));
+            setTimeLeft(remaining);
+            console.log("🌍 Time extended (Global)! New remaining:", remaining);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(attemptChannel);
+      supabase.removeChannel(examChannel);
+    };
+  }, [attemptId, examId, serverDrift]);
 
   // Full screen management
   const enterFullScreen = useCallback(() => {
@@ -78,6 +174,7 @@ export default function TakeExam({
     };
 
     // Initial check
+     
     setIsFullScreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handleFullScreenChange);
     // Initial enter
@@ -95,7 +192,13 @@ export default function TakeExam({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) {
+
+      let userId = user?.id;
+      if (!userId && (process.env.NEXT_PUBLIC_ENVIRONMENT === "local")) {
+        userId = "00000000-0000-0000-0000-000000000001";
+      }
+
+      if (!userId) {
         router.push("/login");
         return;
       }
@@ -105,7 +208,7 @@ export default function TakeExam({
         .from("attempts")
         .select("id, server_due_at, status")
         .eq("exam_id", examId)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .single();
 
       if (!attempt) {
@@ -119,12 +222,16 @@ export default function TakeExam({
       }
 
       setAttemptId(attempt.id);
+      attemptIdRef.current = attempt.id; // BUG-05: Keep ref in sync
 
-      // Calculate time remaining using server time
+      // Calculate time remaining using server time and store drift
       const { data: serverTimeData } = await supabase.rpc("get_server_time");
       const serverNow = serverTimeData
         ? new Date(serverTimeData).getTime()
         : Date.now();
+      
+      setServerDrift(serverNow - Date.now());
+
       const dueAt = new Date(attempt.server_due_at).getTime();
       const remaining = Math.max(0, Math.floor((dueAt - serverNow) / 1000));
       setTimeLeft(remaining);
@@ -176,6 +283,22 @@ export default function TakeExam({
     };
 
     loadExam();
+  }, [examId, router]); // Removed startQuestionId to prevent reload
+
+  // BUG-05: Use ref-based auto-submit to avoid stale closure
+  const handleAutoSubmit = useCallback(async () => {
+    const id = attemptIdRef.current;
+    if (!id) return;
+    try {
+      await fetch(`/api/exam/${examId}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attemptId: id }),
+      });
+    } catch {
+      // ignore
+    }
+    router.push(`/exam/${examId}/submitted`);
   }, [examId, router]);
 
   // Timer countdown
@@ -196,20 +319,6 @@ export default function TakeExam({
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft !== null]);
-
-  const handleAutoSubmit = async () => {
-    if (!attemptId) return;
-    try {
-      await fetch(`/api/exam/${examId}/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId }),
-      });
-    } catch {
-      // ignore
-    }
-    router.push(`/exam/${examId}/submitted`);
-  };
 
   // Save answer with debounce
   const saveAnswer = useCallback(
@@ -605,6 +714,32 @@ export default function TakeExam({
         )}
       </div>
 
+      {/* Tab Switch Warning Modal */}
+      {showTabWarning && (
+        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-card p-8 max-w-md w-full text-center animate-slide-up shadow-2xl border-danger/30">
+            <div className="w-20 h-20 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Warning!</h2>
+            <p className="text-danger font-semibold mb-4 text-lg">
+              What&apos;s up, Seems Like you cheated by tab switching
+            </p>
+            <p className="text-muted-foreground mb-8 text-sm">
+              Your activity has been logged and reported to the administrator. Multiple violations may lead to disqualification.
+            </p>
+            <button
+              onClick={() => setShowTabWarning(false)}
+              className="w-full py-4 rounded-2xl bg-danger text-white font-bold text-lg hover:bg-danger-hover hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-danger/20"
+            >
+              I Understand
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Full screen enforcement modal */}
       {!isFullScreen && !loading && (
         <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden">
@@ -631,5 +766,18 @@ export default function TakeExam({
         </div>
       )}
     </div>
+  );
+}
+
+export default function TakeExam({ params }: { params: Promise<{ examId: string }> }) {
+  const { examId } = use(params);
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="spinner" style={{ width: 40, height: 40 }} />
+      </div>
+    }>
+      <TakeExamContent examId={examId} />
+    </Suspense>
   );
 }

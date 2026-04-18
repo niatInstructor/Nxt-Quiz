@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
 export async function GET(
   request: Request,
@@ -7,8 +8,8 @@ export async function GET(
 ) {
   const { examId } = await params;
 
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 

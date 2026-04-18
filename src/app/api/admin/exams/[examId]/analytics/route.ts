@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
 export async function GET(
   request: Request,
@@ -7,12 +8,9 @@ export async function GET(
 ) {
   const { examId } = await params;
 
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
-    return NextResponse.json(
-      { error: "Admin access required" },
-      { status: 403 },
-    );
+  const admin = await getAdminUser();
+  if (!admin) {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
   const supabase = createAdminClient();
@@ -42,6 +40,7 @@ export async function GET(
       server_due_at,
       submitted_at,
       created_at,
+      tab_switch_count,
       profiles (
         full_name,
         email,
@@ -198,8 +197,8 @@ export async function GET(
     if (ans.selected_option_id) {
       const letter = optionIdToLetter.get(ans.selected_option_id) as "A" | "B" | "C" | "D" | undefined;
       // We only type A|B|C|D here to match schema
-      if (isSubmitted && letter && entry[letter as keyof typeof entry] !== undefined) {
-        (entry as any)[letter]++;
+      if (isSubmitted && letter && entry[letter] !== undefined) {
+        entry[letter]++;
       }
     }
     if (isSubmitted && ans.is_skipped) entry.skipped++;
@@ -349,6 +348,7 @@ export async function GET(
       grade,
       timeToSubmitSeconds,
       submitted_at: a.submitted_at,
+      tab_switch_count: a.tab_switch_count || 0,
     };
   }).sort((a, b) => b.score - a.score); // Sort by score descending (leaderboard)
 

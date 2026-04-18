@@ -16,6 +16,11 @@ export default function Onboarding() {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
+        // If in local dev, don't redirect to login, use a dummy name
+        if (process.env.NEXT_PUBLIC_ENVIRONMENT === "local") {
+          setUserName("Local Student");
+          return;
+        }
         router.push("/login");
         return;
       }
@@ -36,9 +41,29 @@ export default function Onboarding() {
     setError("");
 
     const supabase = createClient();
-    const { error: rpcError } = await supabase.rpc("complete_onboarding", {
-      p_student_college_id: trimmed,
-    });
+    
+    // In local dev, we might not have a user session. 
+    // We'll try to get the user ID, or fallback to a dummy ID if it's local.
+    const { data: { user } } = await supabase.auth.getUser();
+    const targetUserId = user?.id;
+
+    let rpcError;
+
+    if (!targetUserId && (process.env.NEXT_PUBLIC_ENVIRONMENT === "local")) {
+      // Direct insert for local dev without auth session
+      const { error } = await supabase.from("profiles").upsert({
+        id: "00000000-0000-0000-0000-000000000001", // Constant local dummy ID
+        student_college_id: trimmed,
+        full_name: "Local Student",
+        onboarded_at: new Date().toISOString()
+      });
+      rpcError = error;
+    } else {
+      const { error } = await supabase.rpc("complete_onboarding", {
+        p_student_college_id: trimmed,
+      });
+      rpcError = error;
+    }
 
     if (rpcError) {
       if (rpcError.message.includes("duplicate") || rpcError.message.includes("unique")) {

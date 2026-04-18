@@ -16,6 +16,10 @@ export default function JoinExam() {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
+        if (process.env.NEXT_PUBLIC_ENVIRONMENT === "local") {
+          setUserName("Local Student");
+          return;
+        }
         router.push("/login");
         return;
       }
@@ -66,7 +70,7 @@ export default function JoinExam() {
       <header className="flex items-center justify-between px-6 py-4 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-            <span className="text-white font-bold text-sm">R</span>
+            <span className="text-white font-bold text-sm">N</span>
           </div>
           <span className="text-sm font-medium text-foreground">
             Nxt-Quiz

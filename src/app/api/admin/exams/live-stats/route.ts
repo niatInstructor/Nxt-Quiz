@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
-export async function GET(request: Request) {
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+export async function GET() {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
@@ -32,16 +33,22 @@ export async function GET(request: Request) {
 
   const { data: participants, error: pError } = await supabase
     .from("exam_participants")
-    .select("exam_id, status")
+    .select("exam_id, user_id, status")
     .in("exam_id", examIds);
 
   if (pError) {
     return NextResponse.json({ error: pError.message }, { status: 500 });
   }
 
-  const statsMap: Record<string, { total: number, waiting: number, active: number, submitted: number }> = {};
+  // Fetch all attempts for these exams to aggregate tab_switch_count
+  const { data: attempts } = await supabase
+    .from("attempts")
+    .select("exam_id, tab_switch_count")
+    .in("exam_id", examIds);
+
+  const statsMap: Record<string, { total: number, waiting: number, active: number, submitted: number, total_tab_switches: number }> = {};
   examIds.forEach(id => {
-    statsMap[id] = { total: 0, waiting: 0, active: 0, submitted: 0 };
+    statsMap[id] = { total: 0, waiting: 0, active: 0, submitted: 0, total_tab_switches: 0 };
   });
 
   participants?.forEach(p => {
@@ -54,12 +61,20 @@ export async function GET(request: Request) {
     }
   });
 
+  attempts?.forEach(a => {
+    const s = statsMap[a.exam_id];
+    if (s) {
+      s.total_tab_switches += (a.tab_switch_count || 0);
+    }
+  });
+
   const enriched = exams.map(e => ({
     ...e,
     participant_count: statsMap[e.id].total,
     waiting_count: statsMap[e.id].waiting,
     active_count: statsMap[e.id].active,
     submitted_count: statsMap[e.id].submitted,
+    total_tab_switches: statsMap[e.id].total_tab_switches,
   }));
 
   return NextResponse.json({ exams: enriched });

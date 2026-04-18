@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
+import { isValidStudentId } from "@/lib/student-id";
 
 // GET — list all students
-export async function GET(request: Request) {
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+export async function GET() {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
@@ -12,7 +14,23 @@ export async function GET(request: Request) {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, full_name, email, student_college_id, role, onboarded_at, created_at")
+    .select(
+      `
+      id, 
+      full_name, 
+      email, 
+      student_college_id, 
+      role, 
+      onboarded_at, 
+      created_at,
+      exam_participants (
+        status,
+        exams (
+          title
+        )
+      )
+    `
+    )
     .neq("role", "admin")
     .order("created_at", { ascending: false });
 
@@ -21,16 +39,32 @@ export async function GET(request: Request) {
 
 // DELETE — remove a student entirely (delete profile + auth user)
 export async function DELETE(request: Request) {
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
-  const { userId, deleteAll } = await request.json();
+  const { userId, deleteAll, confirmation } = await request.json().catch(() => ({}));
+
+  // 1. Critical: Require strict confirmation
+  if (deleteAll && confirmation !== "DELETE ALL STUDENTS") {
+    return NextResponse.json(
+      { error: "Confirmation 'DELETE ALL STUDENTS' required for bulk deletion." },
+      { status: 400 }
+    );
+  }
+
+  // 2. Critical: Disable bulk deletion in production
+  if (deleteAll && process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { error: "Bulk deletion is disabled in production." },
+      { status: 403 }
+    );
+  }
+
   const supabase = createAdminClient();
 
   if (deleteAll) {
-    // 1. Get all student IDs
     const { data: students } = await supabase
       .from("profiles")
       .select("id")
@@ -38,8 +72,6 @@ export async function DELETE(request: Request) {
 
     if (students && students.length > 0) {
       const ids = students.map((s) => s.id);
-      
-      // We must delete auth users one-by-one (Supabase restriction)
       for (const id of ids) {
         await supabase.auth.admin.deleteUser(id);
       }
@@ -51,10 +83,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "userId is required" }, { status: 400 });
   }
 
-  // Delete all related data is handled by cascading if we delete the auth user
-  // but let's be explicit to ensure all tables are cleared.
-  
-  // 1. Get all attempts
+  // Manual cleanup to ensure consistency
   const { data: attempts } = await supabase
     .from("attempts")
     .select("id")
@@ -65,16 +94,9 @@ export async function DELETE(request: Request) {
     await supabase.from("attempt_answers").delete().in("attempt_id", attemptIds);
   }
 
-  // 2. Delete attempts
   await supabase.from("attempts").delete().eq("user_id", userId);
-
-  // 3. Delete participations
   await supabase.from("exam_participants").delete().eq("user_id", userId);
-
-  // 4. Delete profile (cascade from auth if needed)
   await supabase.from("profiles").delete().eq("id", userId);
-
-  // 5. Delete auth user
   await supabase.auth.admin.deleteUser(userId);
 
   return NextResponse.json({ success: true });
@@ -82,15 +104,23 @@ export async function DELETE(request: Request) {
 
 // PATCH — update a student's profile
 export async function PATCH(request: Request) {
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
   try {
-    const { userId, full_name, student_college_id } = await request.json();
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    const { userId, full_name, student_college_id } = await request.json().catch(() => ({}));
+    if (!userId || !full_name || !student_college_id) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // SEC-12: Validate inputs
+    if (typeof full_name !== "string" || full_name.trim().length < 1 || full_name.length > 200) {
+      return NextResponse.json({ error: "Invalid name (must be 1-200 characters)" }, { status: 400 });
+    }
+    if (!isValidStudentId(student_college_id)) {
+      return NextResponse.json({ error: "Invalid student college ID format" }, { status: 400 });
     }
 
     const supabase = createAdminClient();
@@ -103,7 +133,7 @@ export async function PATCH(request: Request) {
     if (error) throw error;
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

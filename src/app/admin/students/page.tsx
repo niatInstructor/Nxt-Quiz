@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
+
+interface ParticipantInfo {
+  status: string;
+  exams: {
+    title: string;
+  };
+}
 
 interface Student {
   id: string;
@@ -11,6 +18,7 @@ interface Student {
   role: string;
   onboarded_at: string | null;
   created_at: string;
+  exam_participants?: ParticipantInfo[];
 }
 
 export default function StudentsPage() {
@@ -47,7 +55,7 @@ export default function StudentsPage() {
     const res = await fetch("/api/admin/students", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deleteAll: true }),
+      body: JSON.stringify({ deleteAll: true, confirmation: "DELETE ALL STUDENTS" }),
     });
     if (res.ok) {
       setStudents([]);
@@ -93,7 +101,6 @@ export default function StudentsPage() {
     });
 
     if (res.ok) {
-      // Update local state
       setStudents((prev) =>
         prev.map((s) =>
           s.id === editingStudent.id
@@ -108,14 +115,17 @@ export default function StudentsPage() {
     setIsSaving(false);
   };
 
-  const filtered = students.filter((s) => {
-    const q = search.toLowerCase();
-    return (
-      (s.full_name || "").toLowerCase().includes(q) ||
-      (s.email || "").toLowerCase().includes(q) ||
-      (s.student_college_id || "").toLowerCase().includes(q)
-    );
-  });
+  const filtered = useMemo(() => {
+    return students.filter((s) => {
+      const q = search.toLowerCase();
+      const matchesSearch =
+        (s.full_name || "").toLowerCase().includes(q) ||
+        (s.email || "").toLowerCase().includes(q) ||
+        (s.student_college_id || "").toLowerCase().includes(q);
+
+      return matchesSearch;
+    });
+  }, [students, search]);
 
   if (loading) {
     return (
@@ -127,12 +137,12 @@ export default function StudentsPage() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Students</h1>
           <p className="text-sm text-muted-foreground mt-1">{students.length} registered students</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
           {students.length > 0 && (
             <button
               onClick={handleDeleteAll}
@@ -147,7 +157,7 @@ export default function StudentsPage() {
               ) : (
                 <>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  Delete All Students
+                  Delete All
                 </>
               )}
             </button>
@@ -156,10 +166,10 @@ export default function StudentsPage() {
             <svg className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input
               type="text"
-              placeholder="Search by name, email, or ID..."
+              placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-2.5 rounded-xl bg-background border border-border text-foreground placeholder:text-muted text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 w-80"
+              className="pl-10 pr-4 py-2.5 rounded-xl bg-background border border-border text-foreground placeholder:text-muted text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 w-full sm:w-64"
             />
           </div>
         </div>
@@ -174,52 +184,67 @@ export default function StudentsPage() {
                 <th className="text-left p-4 text-muted-foreground font-medium">College ID</th>
                 <th className="text-left p-4 text-muted-foreground font-medium">Email</th>
                 <th className="text-left p-4 text-muted-foreground font-medium">Status</th>
-                <th className="text-left p-4 text-muted-foreground font-medium">Registered</th>
+                <th className="text-left p-4 text-muted-foreground font-medium">Activity</th>
                 <th className="text-right p-4 text-muted-foreground font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((s) => (
-                <tr key={s.id} className="border-b border-border/50 hover:bg-card-hover transition-colors">
-                  <td className="p-4 text-foreground font-medium">{s.full_name || "—"}</td>
-                  <td className="p-4 font-mono text-accent text-xs">{s.student_college_id || "—"}</td>
-                  <td className="p-4 text-muted-foreground text-xs">{s.email || "—"}</td>
-                  <td className="p-4">
-                    <span className={`text-xs px-2 py-1 rounded-lg ${s.onboarded_at ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
-                      {s.onboarded_at ? "Onboarded" : "Pending"}
-                    </span>
-                  </td>
-                  <td className="p-4 text-muted-foreground text-xs">
-                    {new Date(s.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleEditClick(s)}
-                        className="px-3 py-1 rounded-lg text-xs font-medium text-warning hover:bg-warning/10 transition-all"
-                      >
-                        Edit
-                      </button>
-                      <Link
-                        href={`/admin/students/${s.id}`}
-                        className="px-3 py-1 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-all"
-                      >
-                        View
-                      </Link>
-                      {deletingId === s.id ? (
-                        <div className="spinner inline-block" style={{ width: 16, height: 16 }} />
+              {filtered.map((s) => {
+                const activeExam = s.exam_participants?.find(p => p.status === "active");
+                return (
+                  <tr key={s.id} className="border-b border-border/50 hover:bg-card-hover transition-colors">
+                    <td className="p-4 text-foreground font-medium">{s.full_name || "—"}</td>
+                    <td className="p-4 font-mono text-accent text-xs">{s.student_college_id || "—"}</td>
+                    <td className="p-4 text-muted-foreground text-xs">{s.email || "—"}</td>
+                    <td className="p-4">
+                      <span className={`text-[10px] px-2 py-1 rounded-lg uppercase font-bold tracking-wider ${s.onboarded_at ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
+                        {s.onboarded_at ? "Onboarded" : "Pending"}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      {activeExam ? (
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                          </span>
+                          <span className="text-[10px] font-bold text-primary truncate max-w-[120px]" title={activeExam.exams.title}>
+                            {activeExam.exams.title}
+                          </span>
+                        </div>
                       ) : (
-                        <button
-                          onClick={() => handleDelete(s.id, s.full_name || s.email)}
-                          className="px-3 py-1 rounded-lg text-xs font-medium text-danger hover:bg-danger/10 transition-all"
-                        >
-                          Delete
-                        </button>
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Idle</span>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleEditClick(s)}
+                          className="px-3 py-1 rounded-lg text-xs font-medium text-warning hover:bg-warning/10 transition-all"
+                        >
+                          Edit
+                        </button>
+                        <Link
+                          href={`/admin/students/${s.id}`}
+                          className="px-3 py-1 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-all"
+                        >
+                          View
+                        </Link>
+                        {deletingId === s.id ? (
+                          <div className="spinner inline-block" style={{ width: 16, height: 16 }} />
+                        ) : (
+                          <button
+                            onClick={() => handleDelete(s.id, s.full_name || s.email)}
+                            className="px-3 py-1 rounded-lg text-xs font-medium text-danger hover:bg-danger/10 transition-all"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-muted-foreground">

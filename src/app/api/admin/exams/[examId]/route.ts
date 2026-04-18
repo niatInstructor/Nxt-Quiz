@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
 export async function GET(
   request: Request,
@@ -7,12 +8,9 @@ export async function GET(
 ) {
   const { examId } = await params;
 
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
-    return NextResponse.json(
-      { error: "Admin access required" },
-      { status: 403 },
-    );
+  const admin = await getAdminUser();
+  if (!admin) {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
   const supabase = createAdminClient();
@@ -47,9 +45,22 @@ export async function GET(
     .eq("exam_id", examId)
     .order("joined_at", { ascending: true });
 
+  // Fetch attempts for these participants to get tab_switch_count
+  const { data: attempts } = await supabase
+    .from("attempts")
+    .select("user_id, tab_switch_count")
+    .eq("exam_id", examId);
+
+  const attemptMap = new Map((attempts || []).map(a => [a.user_id, a.tab_switch_count]));
+
+  const enrichedParticipants = (participants || []).map(p => ({
+    ...p,
+    tab_switch_count: attemptMap.get(p.user_id) || 0
+  }));
+
   return NextResponse.json({
     exam,
-    participants: participants || [],
+    participants: enrichedParticipants,
   });
 }
 
@@ -59,18 +70,53 @@ export async function PATCH(
   { params }: { params: Promise<{ examId: string }> }
 ) {
   const { examId } = await params;
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
   const { title, durationMinutes, capacity } = await request.json();
+
+  if (
+    (title !== undefined && (typeof title !== "string" || title.trim().length === 0)) ||
+    (durationMinutes !== undefined && (!Number.isInteger(durationMinutes) || durationMinutes <= 0)) ||
+    (capacity !== undefined && (!Number.isInteger(capacity) || capacity <= 0))
+  ) {
+    return NextResponse.json({ error: "Invalid PATCH payload" }, { status: 400 });
+  }
+
   const supabase = createAdminClient();
 
-  const updates: { title?: string; duration_seconds?: number; capacity?: number } = {};
+  // Get current exam state to handle live time extensions
+  const { data: currentExam } = await supabase
+    .from("exams")
+    .select("status, starts_at")
+    .eq("id", examId)
+    .single();
+
+  const updates: { title?: string; duration_seconds?: number; capacity?: number; closes_at?: string } = {};
   if (title) updates.title = title;
-  if (durationMinutes) updates.duration_seconds = durationMinutes * 60;
-  if (capacity) updates.capacity = capacity;
+  
+  if (durationMinutes) {
+    const newDurationSeconds = durationMinutes * 60;
+    updates.duration_seconds = newDurationSeconds;
+
+    // SCENARIO: Exam is live -> Extend the deadline
+    if (currentExam?.status === "in_progress" && currentExam.starts_at) {
+      const startsAt = new Date(currentExam.starts_at).getTime();
+      const newClosesAt = new Date(startsAt + newDurationSeconds * 1000).toISOString();
+      updates.closes_at = newClosesAt;
+
+      // Sync new deadline to all active attempts immediately
+      await supabase
+        .from("attempts")
+        .update({ server_due_at: newClosesAt })
+        .eq("exam_id", examId)
+        .eq("status", "active");
+    }
+  }
+
+  if (capacity !== undefined) updates.capacity = capacity;
 
   const { data, error } = await supabase
     .from("exams")
@@ -92,8 +138,8 @@ export async function DELETE(
   { params }: { params: Promise<{ examId: string }> }
 ) {
   const { examId } = await params;
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 

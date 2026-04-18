@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
 export async function POST(
   request: Request,
@@ -7,8 +8,8 @@ export async function POST(
 ) {
   const { examId } = await params;
 
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
@@ -46,9 +47,12 @@ export async function POST(
       .select("question_id, points")
       .eq("exam_id", examId);
 
+    // SEC-07: Scope to this exam's questions instead of fetching entire question bank
+    const questionIds = (examQuestions || []).map(eq => eq.question_id);
     const { data: questions } = await supabase
       .from("questions")
-      .select("id, correct_option_id");
+      .select("id, correct_option_id")
+      .in("id", questionIds.length > 0 ? questionIds : ["__none__"]);
 
     const correctMap = new Map(
       (questions || []).map((q) => [q.id, q.correct_option_id])

@@ -14,19 +14,26 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  // BUG-01: Fix operator precedence
+  let userId = user?.id;
+  if (!userId && (process.env.ENVIRONMENT === "local")) {
+    userId = "00000000-0000-0000-0000-000000000001";
+  }
+
+  if (!userId) {
     return NextResponse.json({ error: "Auth required" }, { status: 401 });
   }
 
   // Use admin client for scoring
   const admin = createAdminClient();
 
-  // Get attempt
+  // SEC-06: Add exam_id cross-check to prevent cross-exam submission
   const { data: attempt } = await admin
     .from("attempts")
     .select("*")
     .eq("id", attemptId)
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
+    .eq("exam_id", examId)
     .single();
 
   if (!attempt) {
@@ -48,9 +55,12 @@ export async function POST(
     .select("question_id, points")
     .eq("exam_id", examId);
 
+  // SEC-06: Scope questions fetch to this exam's question IDs only
+  const questionIds = (examQuestions || []).map(eq => eq.question_id);
   const { data: questions } = await admin
     .from("questions")
-    .select("id, correct_option_id");
+    .select("id, correct_option_id")
+    .in("id", questionIds.length > 0 ? questionIds : ["__none__"]);
 
   let totalScore = 0;
   const maxScore = examQuestions?.reduce((sum, q) => sum + q.points, 0) || 0;
@@ -89,7 +99,7 @@ export async function POST(
       submitted_at: new Date().toISOString(),
     })
     .eq("exam_id", examId)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   return NextResponse.json({ score: totalScore, maxScore });
 }

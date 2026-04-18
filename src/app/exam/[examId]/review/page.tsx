@@ -32,9 +32,65 @@ export default function ReviewExam({
   const [isNavigatingBack, setIsNavigatingBack] = useState(false);
   const [isOpeningConfirm, setIsOpeningConfirm] = useState(false);
   const [navigatingToQuestion, setNavigatingToQuestion] = useState<string | null>(null);
+  const [showTabWarning, setShowTabWarning] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [serverDrift, setServerDrift] = useState(0); // diff between server and local clock
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // Proctoring: Detect Tab Switch
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (attemptId && document.hidden && !loading) {
+        setShowTabWarning(true);
+        try {
+          await fetch(`/api/exam/${examId}/proctor`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ attemptId }),
+          });
+        } catch (err) {
+          console.error("Failed to report proctoring event:", err);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [attemptId, examId, loading]);
+
+  // Realtime subscription for time extensions
+  useEffect(() => {
+    if (!attemptId) return;
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel(`attempt-updates-review-${attemptId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "attempts",
+          filter: `id=eq.${attemptId}`,
+        },
+        (payload) => {
+          const newDueAt = payload.new.server_due_at;
+          if (newDueAt) {
+            const dueAtMs = new Date(newDueAt).getTime();
+            const nowMs = Date.now() + serverDrift;
+            const remaining = Math.max(0, Math.floor((dueAtMs - nowMs) / 1000));
+            setTimeLeft(remaining);
+            console.log("Time extended (Review Page)! New remaining:", remaining);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [attemptId, serverDrift]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -42,13 +98,19 @@ export default function ReviewExam({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return router.push("/login");
+
+      let userId = user?.id;
+      if (!userId && process.env.ENVIRONMENT === "local") {
+        userId = "00000000-0000-0000-0000-000000000001";
+      }
+
+      if (!userId) return router.push("/login");
 
       const { data: attempt } = await supabase
         .from("attempts")
         .select("id, server_due_at, status")
         .eq("exam_id", examId)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .single();
 
       if (!attempt || attempt.status === "submitted") {
@@ -56,12 +118,17 @@ export default function ReviewExam({
       }
       setAttemptId(attempt.id);
 
+      // Calculate time remaining using server time and store drift
       const { data: serverTimeData } = await supabase.rpc("get_server_time");
       const serverNow = serverTimeData
         ? new Date(serverTimeData).getTime()
         : Date.now();
+      
+      setServerDrift(serverNow - Date.now());
+
       const dueAt = new Date(attempt.server_due_at).getTime();
-      setTimeLeft(Math.max(0, Math.floor((dueAt - serverNow) / 1000)));
+      const remaining = Math.max(0, Math.floor((dueAt - serverNow) / 1000));
+      setTimeLeft(remaining);
 
       const { data: examQs } = await supabase
         .from("student_exam_questions")
@@ -105,7 +172,7 @@ export default function ReviewExam({
 
   const handleGoToQuestion = (questionId: string) => {
     setNavigatingToQuestion(questionId);
-    router.push(`/exam/${examId}/take`);
+    router.push(`/exam/${examId}/take?q=${questionId}`);
   };
 
   const handleOpenConfirm = () => {
@@ -280,6 +347,32 @@ export default function ReviewExam({
           </button>
         </div>
       </main>
+
+      {/* Tab Switch Warning Modal */}
+      {showTabWarning && (
+        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-card p-8 max-w-md w-full text-center animate-slide-up shadow-2xl border-danger/30">
+            <div className="w-20 h-20 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Warning!</h2>
+            <p className="text-danger font-semibold mb-4 text-lg">
+              What&apos;s up, Seems Like you cheated by tab switching
+            </p>
+            <p className="text-muted-foreground mb-8 text-sm">
+              Your activity has been logged and reported to the administrator. Multiple violations may lead to disqualification.
+            </p>
+            <button
+              onClick={() => setShowTabWarning(false)}
+              className="w-full py-4 rounded-2xl bg-danger text-white font-bold text-lg hover:bg-danger-hover hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-danger/20"
+            >
+              I Understand
+            </button>
+          </div>
+        </div>
+      )}
 
       {showConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">

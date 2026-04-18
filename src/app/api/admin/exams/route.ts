@@ -1,35 +1,26 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { nanoid } from "nanoid";
+import { getAdminUser } from "@/lib/admin-auth";
 
 // GET — list all exams
-export async function GET(request: Request) {
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
-    return NextResponse.json(
-      { error: "Admin access required" },
-      { status: 403 },
-    );
+export async function GET() {
+  const admin = await getAdminUser();
+  if (!admin) {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
+  // STD-02: Single query with relation count instead of N+1
   const supabase = createAdminClient();
-
   const { data: exams } = await supabase
     .from("exams")
-    .select("*")
+    .select("*, exam_participants(count)")
     .order("created_at", { ascending: false });
 
-  // Get participant counts
-  const enriched = await Promise.all(
-    (exams || []).map(async (exam) => {
-      const { count } = await supabase
-        .from("exam_participants")
-        .select("*", { count: "exact", head: true })
-        .eq("exam_id", exam.id);
-
-      return { ...exam, participant_count: count || 0 };
-    }),
-  );
+  const enriched = (exams || []).map((exam) => ({
+    ...exam,
+    participant_count: (exam as Record<string, unknown> & { exam_participants: { count: number }[] }).exam_participants?.[0]?.count || 0,
+  }));
 
   // Get total questions count for dashboard
   const { count: questionsCount } = await supabase
@@ -41,18 +32,23 @@ export async function GET(request: Request) {
 
 // POST — create new exam
 export async function POST(request: Request) {
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
-    return NextResponse.json(
-      { error: "Admin access required" },
-      { status: 403 },
-    );
+  const admin = await getAdminUser();
+  if (!admin) {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
   const { title, durationMinutes, capacity } = await request.json();
 
-  if (!title) {
-    return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  if (
+    !title ||
+    typeof title !== "string" ||
+    title.trim().length === 0 ||
+    !Number.isInteger(durationMinutes) ||
+    durationMinutes <= 0 ||
+    !Number.isInteger(capacity) ||
+    capacity <= 0
+  ) {
+    return NextResponse.json({ error: "Invalid exam payload" }, { status: 400 });
   }
 
   const supabase = createAdminClient();
@@ -72,9 +68,15 @@ export async function POST(request: Request) {
     adminId = adminProfiles[0].id;
   } else {
     // Create an admin user in auth and profiles
+    // Use envPwd directly, failing if missing (consistent with login route)
+    const envPwd = process.env.ADMIN_PASSWORD?.trim();
+    if (!envPwd || (process.env.NODE_ENV === "production" && envPwd === "qwerty")) {
+      return NextResponse.json({ error: "Admin password not securely configured" }, { status: 500 });
+    }
+
     const { data: newUser } = await supabase.auth.admin.createUser({
       email: "admin@quiz-platform.local",
-      password: process.env.ADMIN_PASSWORD || "qwerty",
+      password: envPwd,
       email_confirm: true,
       user_metadata: { full_name: "Administrator" },
     });

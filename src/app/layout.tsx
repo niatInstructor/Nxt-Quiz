@@ -16,6 +16,12 @@ export const metadata: Metadata = {
   title: "Nxt-Quiz",
   description:
     "A comprehensive general-purpose MCQ assessment platform for evaluating proficiency across various subjects and technologies.",
+  openGraph: {
+    title: "Nxt-Quiz Assessment Platform",
+    description:
+      "A comprehensive general-purpose MCQ assessment platform for evaluating proficiency across various subjects and technologies.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

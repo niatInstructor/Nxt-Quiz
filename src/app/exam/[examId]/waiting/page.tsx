@@ -38,10 +38,17 @@ export default function WaitingRoom({
   }, [examId, router]);
 
   useEffect(() => {
+    const supabase = createClient();
+
+    // Check for user in local dev to bypass login redirect
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user && process.env.NEXT_PUBLIC_ENVIRONMENT !== "local") {
+        router.push("/login");
+      }
+    });
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchExamData();
-
-    const supabase = createClient();
 
     // Subscribe to exam status changes via Realtime
     const channel = supabase

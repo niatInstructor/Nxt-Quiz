@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
 // GET — get a single question
 export async function GET(
@@ -7,8 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ questionId: string }> }
 ) {
   const { questionId } = await params;
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
@@ -33,8 +34,8 @@ export async function PATCH(
   { params }: { params: Promise<{ questionId: string }> }
 ) {
   const { questionId } = await params;
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
@@ -84,8 +85,8 @@ export async function DELETE(
   { params }: { params: Promise<{ questionId: string }> }
 ) {
   const { questionId } = await params;
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 

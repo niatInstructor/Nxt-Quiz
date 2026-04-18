@@ -51,3 +51,6 @@ next-env.d.ts
 
 # OS
 Desktop.ini
+
+DEPLOYMENT_GUIDE.md
+memory.md

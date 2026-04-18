@@ -24,6 +24,7 @@ interface Attempt {
   created_at: string;
   total_score: number;
   max_score: number;
+  tab_switch_count: number;
   exams: {
     title: string;
     exam_code: string;
@@ -52,6 +53,7 @@ export default function StudentDetails({
   const [data, setData] = useState<StudentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedAttempt, setSelectedAttempt] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"All" | "Correct" | "Incorrect" | "Skipped">("All");
   const router = useRouter();
 
   useEffect(() => {
@@ -75,6 +77,17 @@ export default function StudentDetails({
   }
 
   const attempt = data.attempts.find(a => a.id === selectedAttempt) || data.attempts[0];
+
+  const filteredAnswers = attempt?.answers?.filter((ans) => {
+    const isCorrect = ans.selected_option_id === ans.questions.correct_option_id;
+    const isSkipped = !ans.selected_option_id;
+
+    if (filter === "All") return true;
+    if (filter === "Correct") return isCorrect;
+    if (filter === "Incorrect") return !isCorrect && !isSkipped;
+    if (filter === "Skipped") return isSkipped;
+    return true;
+  });
 
   return (
     <div className="p-8">
@@ -155,72 +168,121 @@ export default function StudentDetails({
         <div className="lg:col-span-2">
           {attempt && attempt.status === 'submitted' && attempt.answers ? (
             <div className="glass-card">
-              <div className="p-6 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10 rounded-t-2xl">
+              <div className="p-6 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between sticky top-0 bg-card z-10 rounded-t-2xl gap-4">
                 <div>
                   <h2 className="text-lg font-bold text-foreground">Submission Review</h2>
-                  <p className="text-sm text-muted-foreground">{attempt.exams?.title} • {attempt.exams?.exam_code}</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <p className="text-sm text-muted-foreground">{attempt.exams?.title} • {attempt.exams?.exam_code}</p>
+                    {attempt.tab_switch_count > 0 && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-danger bg-danger/10 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                        {attempt.tab_switch_count} Tab Switches
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
+
+                <div className="flex items-center gap-1 bg-card border border-border p-1 rounded-xl">
+                  {(["All", "Correct", "Incorrect", "Skipped"] as const).map((f) => {
+                    const count = attempt.answers?.filter(ans => {
+                      const isCorrect = ans.selected_option_id === ans.questions.correct_option_id;
+                      const isSkipped = !ans.selected_option_id;
+                      if (f === "All") return true;
+                      if (f === "Correct") return isCorrect;
+                      if (f === "Incorrect") return !isCorrect && !isSkipped;
+                      if (f === "Skipped") return isSkipped;
+                      return true;
+                    }).length || 0;
+
+                    return (
+                      <button
+                        key={f}
+                        onClick={() => setFilter(f)}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5 ${
+                          filter === f
+                            ? "bg-primary text-white shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-card-hover"
+                        }`}
+                      >
+                        {f}
+                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${
+                          filter === f ? "bg-white/20 text-white" : "bg-muted/10 text-muted-foreground"
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="text-right hidden sm:block">
                   <div className="text-2xl font-black text-primary">{attempt.total_score} / {attempt.max_score}</div>
                   <p className="text-xs text-muted-foreground">Total Points</p>
                 </div>
               </div>
 
               <div className="p-6 space-y-8">
-                {attempt.answers.map((ans, idx) => {
-                  const isCorrect = ans.selected_option_id === ans.questions.correct_option_id;
-                  const opts = typeof ans.questions.options === 'string' ? JSON.parse(ans.questions.options) : ans.questions.options;
-                  
-                  return (
-                    <div key={ans.id} className="relative pl-8">
-                      <div className="absolute left-0 top-0 bottom-0 w-px bg-border" />
-                      <div className={`absolute left-[-4px] top-1.5 w-2 h-2 rounded-full ${isCorrect ? 'bg-success' : ans.selected_option_id ? 'bg-danger' : 'bg-muted'}`} />
-                      
-                      <div className="mb-4">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Question {idx + 1}</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-border/50 text-muted-foreground">{ans.questions.topic}</span>
+                {filteredAnswers?.length === 0 ? (
+                  <div className="p-12 text-center text-muted-foreground glass-card border-dashed">
+                    No items match this filter.
+                  </div>
+                ) : (
+                  filteredAnswers?.map((ans) => {
+                    const idx = attempt.answers?.findIndex(a => a.id === ans.id) ?? 0;
+                    const isCorrect = ans.selected_option_id === ans.questions.correct_option_id;
+                    const opts = typeof ans.questions.options === 'string' ? JSON.parse(ans.questions.options) : ans.questions.options;
+                    
+                    return (
+                      <div key={ans.id} className="relative pl-8">
+                        <div className="absolute left-0 top-0 bottom-0 w-px bg-border" />
+                        <div className={`absolute left-[-4px] top-1.5 w-2 h-2 rounded-full ${isCorrect ? "bg-success" : ans.selected_option_id ? "bg-danger" : "bg-muted"}`} />
+                        
+                        <div className="mb-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Question {idx + 1}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-border/50 text-muted-foreground">{ans.questions.topic}</span>
+                          </div>
+                          <h4 className="text-foreground font-medium leading-relaxed">{ans.questions.question}</h4>
                         </div>
-                        <h4 className="text-foreground font-medium leading-relaxed">{ans.questions.question}</h4>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {opts.map((opt: { id: string; text: string }) => {
+                            const isSelected = ans.selected_option_id === opt.id;
+                            const isCorrectOpt = ans.questions.correct_option_id === opt.id;
+                            
+                            let borderColor = 'border-border';
+                            let bgColor = 'bg-card';
+
+                            if (isCorrectOpt) {
+                              borderColor = 'border-success';
+                              bgColor = 'bg-success/5';
+                            } else if (isSelected && !isCorrectOpt) {
+                              borderColor = 'border-danger';
+                              bgColor = 'bg-danger/5';
+                            }
+
+                            return (
+                              <div
+                                key={opt.id}
+                                className={`p-3 rounded-xl border-2 text-sm flex gap-3 ${borderColor} ${bgColor} text-foreground`}
+                              >
+                                <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${isCorrectOpt ? 'bg-success text-white' : isSelected ? 'bg-danger text-white' : 'bg-border/50 text-muted-foreground'}`}>
+                                  {opt.id}
+                                </span>
+                                <span className="pt-0.5">{opt.text}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="mt-4 p-4 rounded-xl bg-primary/5 border border-primary/10 text-xs">
+                          <p className="font-bold text-primary mb-1 uppercase tracking-widest">Explanation</p>
+                          <p className="text-muted-foreground leading-relaxed">{ans.questions.explanation}</p>
+                        </div>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {opts.map((opt: { id: string; text: string }) => {
-                          const isSelected = ans.selected_option_id === opt.id;
-                          const isCorrectOpt = ans.questions.correct_option_id === opt.id;
-                          
-                          let borderColor = 'border-border';
-                          let bgColor = 'bg-card';
-
-                          if (isCorrectOpt) {
-                            borderColor = 'border-success';
-                            bgColor = 'bg-success/5';
-                          } else if (isSelected && !isCorrectOpt) {
-                            borderColor = 'border-danger';
-                            bgColor = 'bg-danger/5';
-                          }
-
-                          return (
-                            <div
-                              key={opt.id}
-                              className={`p-3 rounded-xl border-2 text-sm flex gap-3 ${borderColor} ${bgColor} text-foreground`}
-                            >
-                              <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${isCorrectOpt ? 'bg-success text-white' : isSelected ? 'bg-danger text-white' : 'bg-border/50 text-muted-foreground'}`}>
-                                {opt.id}
-                              </span>
-                              <span className="pt-0.5">{opt.text}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="mt-4 p-4 rounded-xl bg-primary/5 border border-primary/10 text-xs">
-                        <p className="font-bold text-primary mb-1 uppercase tracking-widest">Explanation</p>
-                        <p className="text-muted-foreground leading-relaxed">{ans.questions.explanation}</p>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
           ) : attempt ? (

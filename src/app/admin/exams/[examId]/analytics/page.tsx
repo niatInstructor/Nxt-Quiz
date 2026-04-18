@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, use, useMemo, Fragment } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   BarChart,
   Bar,
@@ -81,6 +83,7 @@ interface StudentResult {
   grade: string;
   timeToSubmitSeconds: number | null;
   submitted_at: string | null;
+  tab_switch_count: number;
 }
 
 interface TimeAnalytics {
@@ -282,9 +285,82 @@ export default function Analytics({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${data.examMeta.examCode}-results.csv`;
+    const safeTitle = data.examMeta.title.replace(/[^a-zA-Z0-9]/g, '_');
+    a.download = `${safeTitle}-${data.examMeta.examCode}-results.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = () => {
+    if (!data) return;
+
+    // Define type for jsPDF with autoTable extension
+    interface AutoTableDoc extends jsPDF {
+      lastAutoTable?: { finalY: number };
+    }
+
+    const doc = new jsPDF() as AutoTableDoc;
+    const { examMeta, summary, studentResults } = data;
+
+    // Header
+    doc.setFontSize(20);
+    doc.text("Examination Report", 14, 22);
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`${examMeta.title} (${examMeta.examCode})`, 14, 30);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 36);
+
+    // Summary Section
+    doc.setDrawColor(200);
+    doc.line(14, 42, 196, 42);
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Summary Statistics", 14, 50);
+    
+    autoTable(doc, {
+      startY: 55,
+      head: [["Metric", "Value"]],
+      body: [
+        ["Total Participants", summary.totalParticipants.toString()],
+        ["Total Submissions", summary.totalSubmitted.toString()],
+        ["Average Score", `${summary.avgScore} / ${summary.maxPossible}`],
+        ["Pass Rate", `${summary.passRate}%`],
+        ["Completion Rate", `${summary.completionRate}%`],
+      ],
+      theme: "striped",
+      headStyles: { fillColor: [79, 70, 229] },
+    });
+
+    // Student Results Table
+    const finalY1 = doc.lastAutoTable?.finalY ?? 100;
+    doc.setFontSize(14);
+    doc.text("Student Results", 14, finalY1 + 15);
+
+    const tableData = studentResults.map((s, i) => [
+      (i + 1).toString(),
+      s.name,
+      s.college_id,
+      `${s.score}/${s.max_score}`,
+      `${s.percentage}%`,
+      s.grade,
+      s.tab_switch_count.toString(),
+      formatTime(s.timeToSubmitSeconds),
+    ]);
+
+    autoTable(doc, {
+      startY: finalY1 + 20,
+      head: [["Rank", "Name", "ID", "Score", "%", "Grade", "Switches", "Time"]],
+      body: tableData,
+      theme: "grid",
+      headStyles: { fillColor: [79, 70, 229] },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        6: { fontStyle: 'bold', textColor: [220, 38, 38] } // Red for switches
+      }
+    });
+
+    const safeTitle = examMeta.title.replace(/[^a-zA-Z0-9]/g, '_');
+    doc.save(`${safeTitle}-${examMeta.examCode}-report.pdf`);
   };
 
   /* – Column sort handler – */
@@ -366,7 +442,7 @@ export default function Analytics({
     <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
       {/* ═══════════════════════ SECTION 1: EXAM HEADER ═══════════════════════ */}
       <div className="mb-8">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <a
               href={`/admin/exams/${examId}`}
@@ -421,29 +497,26 @@ export default function Analytics({
               )}
             </div>
           </div>
-          <button
-            onClick={exportCSV}
-            className="px-5 py-2.5 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-3">
+            <button
+              onClick={exportCSV}
+              className="px-5 py-2.5 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all flex items-center gap-2"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
-              />
-            </svg>
-            Export CSV
-          </button>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+              CSV
+            </button>
+            <button
+              onClick={exportPDF}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-all flex items-center gap-2 shadow-lg shadow-primary/20"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+              PDF Report
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 mt-6 p-1 bg-card border border-border rounded-xl w-fit">
+        <div className="flex items-center gap-1 mt-6 p-1 bg-card border border-border rounded-xl w-full sm:w-fit overflow-x-auto hide-scrollbar">
           {(["overview", "questions", "students", "time"] as const).map(
             (tab) => (
               <button
@@ -476,6 +549,7 @@ export default function Analytics({
             {[
               { label: "Avg Score", value: `${summary.avgScore}/${summary.maxPossible}`, color: "text-primary", sub: `${summary.maxPossible > 0 ? Math.round((summary.avgScore / summary.maxPossible) * 100) : 0}%` },
               { label: "High Score", value: `${summary.highestScore}`, color: "text-success", sub: `${summary.maxPossible > 0 ? Math.round((summary.highestScore / summary.maxPossible) * 100) : 0}%` },
+              { label: "Avg Switches", value: `${(data.studentResults.reduce((acc, s) => acc + s.tab_switch_count, 0) / Math.max(1, data.studentResults.length)).toFixed(1)}`, color: "text-danger", sub: "per student" },
               { label: "Pass Rate", value: `${summary.passRate}%`, color: "text-accent", sub: `≥40% to pass` },
               { label: "Submitted", value: `${summary.totalSubmitted}`, color: "text-success", sub: `of ${summary.totalParticipants}` },
               { label: "Completion", value: `${summary.completionRate}%`, color: "text-warning", sub: "submitted/joined" },
@@ -616,13 +690,16 @@ export default function Analytics({
                     fontSize: 12,
                   }}
                   formatter={(
-                    value: any,
-                    _name: any,
-                    props: any,
-                  ) => [
-                    `${value}% (${props.payload.questionCount} Qs)`,
-                    "Avg Correct",
-                  ]}
+                    value,
+                    _name,
+                    props,
+                  ) => {
+                    const p = props as unknown as { payload: { questionCount: number } };
+                    return [
+                      `${value}% (${p.payload.questionCount} Qs)`,
+                      "Avg Correct",
+                    ];
+                  }}
                 />
                 <Bar
                   dataKey="avgCorrectPct"
@@ -1057,6 +1134,7 @@ export default function Analytics({
                       { key: "score", label: "Score" },
                       { key: "percentage", label: "%" },
                       { key: "grade", label: "Grade" },
+                      { key: "tab_switch_count", label: "Switches" },
                       { key: "timeToSubmitSeconds", label: "Time Taken" },
                       { key: "submitted_at", label: "Submitted" },
                     ].map((col) => (
@@ -1123,6 +1201,11 @@ export default function Analytics({
                           className={`text-[10px] px-2 py-0.5 rounded-lg border font-bold ${gradeBadge(s.grade)}`}
                         >
                           {s.grade}
+                        </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className={`text-xs font-bold ${s.tab_switch_count > 0 ? "text-danger" : "text-muted"}`}>
+                          {s.tab_switch_count}
                         </span>
                       </td>
                       <td className="p-3 text-muted-foreground text-[11px] font-mono">

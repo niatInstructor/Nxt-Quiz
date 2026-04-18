@@ -9,6 +9,7 @@ interface Participant {
   user_id: string;
   status: string;
   joined_at: string;
+  tab_switch_count?: number;
   profiles: {
     full_name: string;
     email: string;
@@ -48,6 +49,8 @@ export default function ExamControl({
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const router = useRouter();
 
   const fetchData = async () => {
@@ -67,13 +70,26 @@ export default function ExamControl({
       const qRes = await fetch(`/api/admin/exams/${examId}/questions-count`);
       const { count } = qRes.ok ? await qRes.json() : { count: 0 };
 
-      setExam({ ...data.exam, questionsCount: count });
+      const examData = { ...data.exam, questionsCount: count };
+      setExam(examData);
       setParticipants(data.participants || []);
       setEditForm({
         title: data.exam.title,
         capacity: data.exam.capacity,
         durationMinutes: Math.round(data.exam.duration_seconds / 60),
       });
+
+      // Calculate time left if in progress
+      if (data.exam.status === "in_progress" && data.exam.starts_at) {
+        const startsAt = new Date(data.exam.starts_at).getTime();
+        const durationMs = data.exam.duration_seconds * 1000;
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((startsAt + durationMs - now) / 1000));
+        setTimeLeft(remaining);
+      } else {
+        setTimeLeft(null);
+      }
+
       setError(null);
     } catch (err) {
       console.error(err);
@@ -81,6 +97,22 @@ export default function ExamControl({
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0 || exam?.status !== "in_progress") return;
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => (prev && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timeLeft, exam?.status]);
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    return `${m}m ${s}s`;
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -239,12 +271,16 @@ export default function ExamControl({
     closed: "text-success border-success/30",
   };
 
-  const filteredParticipants = participants.filter(
-    (p) =>
+  const filteredParticipants = participants.filter((p) => {
+    const matchesSearch =
       (p.profiles?.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.profiles?.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.profiles?.student_college_id || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      (p.profiles?.student_college_id || "").toLowerCase().includes(searchQuery.toLowerCase());
+      
+    const matchesStatus = statusFilter ? p.status === statusFilter : true;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -267,23 +303,41 @@ export default function ExamControl({
           </p>
         </div>
         
-        {/* Compact Metrics Bar */}
-        <div className="flex flex-wrap items-center gap-3 glass-card px-4 py-2 rounded-2xl w-full md:w-auto">
+        {/* Compact Metrics Bar with Filters */}
+        <div className="flex flex-wrap items-center gap-1 glass-card px-2 py-2 rounded-2xl w-full md:w-auto">
           {[
-            { label: "Waiting", count: waitingCount, color: "text-warning", dot: "bg-warning" },
-            { label: "Active", count: activeCount, color: "text-primary", dot: "bg-primary" },
-            { label: "Submitted", count: submittedCount, color: "text-success", dot: "bg-success" },
-            { label: "Questions", count: exam.questionsCount || 0, color: "text-accent", dot: "bg-accent" },
-          ].map((s, i) => (
-            <div key={s.label} className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${s.dot} ${s.label === "Active" && s.count > 0 ? "animate-pulse" : ""}`}></span>
-                <span className="text-sm font-medium text-foreground">{s.label}</span>
-                <span className={`text-sm font-bold ${s.color}`}>{s.count}</span>
+            { label: "Waiting", value: "waiting", count: waitingCount, color: "text-warning", dot: "bg-warning", hover: "hover:bg-warning/10" },
+            { label: "Active", value: "active", count: activeCount, color: "text-primary", dot: "bg-primary", hover: "hover:bg-primary/10" },
+            { label: "Submitted", value: "submitted", count: submittedCount, color: "text-success", dot: "bg-success", hover: "hover:bg-success/10" },
+            { label: "Questions", value: null, count: exam.questionsCount || 0, color: "text-accent", dot: "bg-accent", hover: "" },
+          ].map((s, i) => {
+            const isClickable = s.value !== null;
+            const isActive = statusFilter === s.value;
+            
+            return (
+              <div key={s.label} className="flex items-center">
+                {isClickable ? (
+                  <button
+                    onClick={() => setStatusFilter(isActive ? null : s.value)}
+                    aria-label={`Filter by ${s.label}`}
+                    aria-pressed={isActive}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all cursor-pointer focus:outline-none ${s.hover} ${isActive ? "bg-muted/10 ring-1 ring-border shadow-sm" : "bg-transparent"}`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${s.dot} ${s.label === "Active" && s.count > 0 ? "animate-pulse" : ""}`}></span>
+                    <span className="text-sm font-medium text-foreground">{s.label}</span>
+                    <span className={`text-sm font-bold ${s.color}`}>{s.count}</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-transparent select-none">
+                    <span className={`w-2 h-2 rounded-full ${s.dot}`}></span>
+                    <span className="text-sm font-medium text-foreground">{s.label}</span>
+                    <span className={`text-sm font-bold ${s.color}`}>{s.count}</span>
+                  </div>
+                )}
+                {i < 3 && <div className="w-px h-6 bg-border mx-1"></div>}
               </div>
-              {i < 3 && <div className="w-px h-6 bg-border mx-1"></div>}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -361,8 +415,8 @@ export default function ExamControl({
                   <tr className="border-b border-border bg-muted/5">
                     <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Name</th>
                     <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">College ID</th>
-                    <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Email</th>
                     <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Status</th>
+                    <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap text-center">Tab Switches</th>
                     <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Joined At</th>
                     <th className="text-right p-4 text-muted-foreground font-medium whitespace-nowrap">Actions</th>
                   </tr>
@@ -370,9 +424,13 @@ export default function ExamControl({
                 <tbody>
                   {filteredParticipants.map((p) => (
                     <tr key={p.id} className="border-b border-border/50 hover:bg-card-hover transition-colors">
-                      <td className="p-4 text-foreground whitespace-nowrap">{p.profiles?.full_name || "—"}</td>
+                      <td className="p-4 text-foreground whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{p.profiles?.full_name || "—"}</span>
+                          <span className="text-[10px] text-muted-foreground">{p.profiles?.email}</span>
+                        </div>
+                      </td>
                       <td className="p-4 font-mono text-accent whitespace-nowrap">{p.profiles?.student_college_id || "—"}</td>
-                      <td className="p-4 text-muted-foreground whitespace-nowrap max-w-[200px] truncate" title={p.profiles?.email}>{p.profiles?.email || "—"}</td>
                       <td className="p-4 whitespace-nowrap">
                         <span className={`text-[10px] px-2 py-1 rounded-lg uppercase tracking-wider font-bold ${
                           p.status === "waiting" ? "bg-warning/10 text-warning"
@@ -383,6 +441,18 @@ export default function ExamControl({
                         }`}>
                           {p.status}
                         </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        {p.tab_switch_count && p.tab_switch_count > 0 ? (
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-xs ${
+                            p.tab_switch_count > 5 ? "bg-danger/10 text-danger animate-pulse" : "bg-warning/10 text-warning"
+                          }`}>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                            {p.tab_switch_count}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
                       </td>
                       <td className="p-4 text-muted-foreground text-[11px] whitespace-nowrap">{new Date(p.joined_at).toLocaleString()}</td>
                       <td className="p-4 text-right whitespace-nowrap">
@@ -425,7 +495,7 @@ export default function ExamControl({
                   ) : filteredParticipants.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="p-8 text-center text-muted-foreground text-sm">
-                        No students match your search query.
+                        No students match your active filters.
                       </td>
                     </tr>
                   ) : null}
@@ -526,6 +596,12 @@ export default function ExamControl({
                 <span className="text-muted-foreground">Status</span>
                 <span className="font-semibold text-foreground capitalize">{exam.status.replace("_", " ")}</span>
               </div>
+              {timeLeft !== null && (
+                <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10">
+                  <span className="text-primary font-medium">Time Left</span>
+                  <span className="font-mono font-bold text-primary animate-pulse">{formatTime(timeLeft)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Duration</span>
                 <span className="font-semibold text-foreground">{Math.round(exam.duration_seconds / 60)} minutes</span>

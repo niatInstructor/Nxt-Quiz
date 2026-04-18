@@ -59,7 +59,7 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Exam Dashboard</h1>
@@ -69,7 +69,7 @@ export default function AdminDashboard() {
         </div>
         
         {/* Compact Metrics Bar */}
-        <div className="flex items-center gap-3 glass-card px-4 py-2 rounded-2xl w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 glass-card px-4 py-2 rounded-2xl w-full md:w-auto">
           {[
             { label: "Active", count: grouped.in_progress.length, color: "text-primary", dot: "bg-primary" },
             { label: "Waiting", count: grouped.waiting.length, color: "text-warning", dot: "bg-warning" },
@@ -91,16 +91,17 @@ export default function AdminDashboard() {
         {/* Main Workspace */}
         <div className="flex-1 space-y-6">
           <div className="glass-card p-2 flex items-center gap-3 h-14">
-            <svg className="w-5 h-5 text-muted-foreground ml-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <svg aria-hidden="true" className="w-5 h-5 text-muted-foreground ml-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input 
               type="text" 
               placeholder="Search exams by title or code..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-transparent border-none focus:ring-0 text-sm text-foreground p-2 outline-none h-full"
+              aria-label="Search exams by title or code"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="p-2 mr-1 text-muted-foreground hover:text-foreground flex-shrink-0">
+              <button onClick={() => setSearchQuery("")} className="p-2 mr-1 text-muted-foreground hover:text-foreground flex-shrink-0" aria-label="Clear search">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             )}

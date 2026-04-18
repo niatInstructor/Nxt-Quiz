@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ studentId: string }> }
 ) {
   const { studentId } = await params;
-  const cookies = request.headers.get("cookie") || "";
-  if (!cookies.includes("admin_session=authenticated")) {
+  const admin = await getAdminUser();
+  if (!admin) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
@@ -37,24 +38,46 @@ export async function GET(
     .eq("user_id", studentId)
     .order("created_at", { ascending: false });
 
-  // 3. For each attempt, fetch answers if it's submitted
-  const enrichedAttempts = await Promise.all((attempts || []).map(async (attempt) => {
-    if (attempt.status === 'submitted') {
-      const { data: answers } = await supabase
-        .from("attempt_answers")
-        .select(`
-          *,
-          questions (*)
-        `)
-        .eq("attempt_id", attempt.id);
-      
-      return { ...attempt, answers: answers || [] };
+  // 3. Batched fetch for all answers across all submitted attempts (Avoid N+1)
+  const submittedAttemptIds = (attempts || [])
+    .filter((a) => a.status === "submitted")
+    .map((a) => a.id);
+
+  interface StudentAnswer {
+    attempt_id: string;
+    id: string;
+    question_id: string;
+    selected_option_id: string | null;
+    is_bookmarked: boolean;
+    is_skipped: boolean;
+    questions: Record<string, unknown>;
+  }
+
+  let allAnswers: StudentAnswer[] = [];
+  if (submittedAttemptIds.length > 0) {
+    const { data: answers } = await supabase
+      .from("attempt_answers")
+      .select(`
+        *,
+        questions (*)
+      `)
+      .in("attempt_id", submittedAttemptIds);
+    allAnswers = (answers || []) as StudentAnswer[];
+  }
+
+  // 4. Map answers back to their respective attempts
+  const enrichedAttempts = (attempts || []).map((attempt) => {
+    if (attempt.status === "submitted") {
+      return {
+        ...attempt,
+        answers: allAnswers.filter((ans) => ans.attempt_id === attempt.id),
+      };
     }
     return attempt;
-  }));
+  });
 
   return NextResponse.json({
     student: profile,
-    attempts: enrichedAttempts
+    attempts: enrichedAttempts,
   });
 }

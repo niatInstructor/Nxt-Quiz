@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/browser";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 
 interface Option {
@@ -18,7 +18,7 @@ interface ResultItem {
   question: string;
   codeSnippet: string | null;
   options: Option[];
-  correctOptionId: string;
+  correctOptionId: string | null;
   explanation: string;
   selectedOptionId: string | null;
 }
@@ -34,14 +34,17 @@ export default function Submitted({
   const [maxScore, setMaxScore] = useState<number | null>(null);
   const [examTitle, setExamTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isPublished, setIsPublished] = useState(false);
   const router = useRouter();
 
   const [showReview, setShowReview] = useState(false);
   const [results, setResults] = useState<ResultItem[]>([]);
   const [loadingResults, setLoadingResults] = useState(false);
+  const [filter, setFilter] = useState<
+    "All" | "Correct" | "Incorrect" | "Skipped"
+  >("All");
 
   useEffect(() => {
-    // Exit full screen automatically upon reaching the submitted page
     if (typeof document !== "undefined" && document.fullscreenElement) {
       document
         .exitFullscreen()
@@ -50,43 +53,81 @@ export default function Submitted({
   }, []);
 
   useEffect(() => {
-    const loadData = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return router.push("/login");
+    const supabase = createClient();
 
-      const { data: attempt } = await supabase
-        .from("attempts")
-        .select("submitted_at, status, total_score, max_score")
-        .eq("exam_id", examId)
-        .eq("user_id", user.id)
-        .single();
+    // Subscribe to exam status changes
+    const channel = supabase
+      .channel(`exam-submitted-realtime-${examId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "exams",
+          filter: `id=eq.${examId}`,
+        },
+        (payload) => {
+          if (payload.new.status === "closed") {
+            // Exam closed! Refresh score and results to reveal answer key
+            loadData();
+            if (showReview) {
+              // If review is open, force a re-fetch of answers
+              setResults([]);
+              setShowReview(false);
+              setTimeout(() => handleToggleReview(), 100);
+            }
+          }
+        },
+      )
+      .subscribe();
 
-      const { data: exam } = await supabase
-        .from("exams")
-        .select("title")
-        .eq("id", examId)
-        .single();
-
-      if (exam) {
-        setExamTitle(exam.title);
-      }
-
-      if (attempt?.submitted_at) {
-        setSubmittedAt(new Date(attempt.submitted_at).toLocaleString());
-      }
-
-      if (attempt) {
-        setScore(attempt.total_score);
-        setMaxScore(attempt.max_score);
-      }
-
-      setLoading(false);
+    return () => {
+      supabase.removeChannel(channel);
     };
-    loadData();
+  }, [examId, showReview]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // BUG-07: Wrap loadData in useCallback to fix stale closure
+  const loadData = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // BUG-02: Use NEXT_PUBLIC_ENVIRONMENT for client access
+    let userId = user?.id;
+    if (!userId && process.env.NEXT_PUBLIC_ENVIRONMENT === "local") {
+      userId = "00000000-0000-0000-0000-000000000001";
+    }
+
+    if (!userId) return router.push("/login");
+
+    const { data: attempt } = await supabase
+      .from("attempts")
+      .select("submitted_at, status, total_score, max_score")
+      .eq("exam_id", examId)
+      .eq("user_id", userId)
+      .single();
+
+    const { data: exam } = await supabase
+      .from("exams")
+      .select("title")
+      .eq("id", examId)
+      .single();
+
+    if (exam) setExamTitle(exam.title);
+    if (attempt?.submitted_at)
+      setSubmittedAt(new Date(attempt.submitted_at).toLocaleString());
+    if (attempt) {
+      setScore(attempt.total_score);
+      setMaxScore(attempt.max_score);
+    }
+
+    setLoading(false);
   }, [examId, router]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleToggleReview = async () => {
     if (showReview) {
@@ -101,6 +142,7 @@ export default function Submitted({
         if (res.ok) {
           const data = await res.json();
           setResults(data.results || []);
+          setIsPublished(data.isPublished || false);
         }
       } catch {
         console.error("Failed to fetch results");
@@ -113,30 +155,57 @@ export default function Submitted({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner" style={{ width: 40, height: 40 }} />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div
+            className="spinner mx-auto mb-4"
+            style={{ width: 48, height: 48 }}
+          />
+          <p className="text-muted-foreground animate-pulse font-medium">
+            Finalizing your results...
+          </p>
+        </div>
       </div>
     );
   }
 
   const percentage = maxScore ? Math.round(((score || 0) / maxScore) * 100) : 0;
-  const isPass = percentage >= 50;
+  const isPass = percentage >= 40;
+
+  const filteredResults = results.filter((r) => {
+    if (filter === "All") return true;
+    if (!isPublished) {
+      if (filter === "Skipped") return !r.selectedOptionId;
+      return true;
+    }
+    if (filter === "Correct") return r.selectedOptionId === r.correctOptionId;
+    if (filter === "Incorrect")
+      return r.selectedOptionId && r.selectedOptionId !== r.correctOptionId;
+    if (filter === "Skipped") return !r.selectedOptionId;
+    return true;
+  });
 
   return (
-    <div className="min-h-screen py-12 px-4 flex flex-col items-center overflow-y-auto">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 pb-20">
+      {/* ──────────────────────── HEADER / HERO ──────────────────────── */}
       <div
-        className={`w-full transition-all duration-500 ease-in-out ${showReview ? "max-w-3xl" : "max-w-md"}`}
+        className={`w-full pt-16 pb-32 px-4 text-center relative overflow-hidden transition-colors duration-700 ${
+          isPass
+            ? "bg-gradient-to-b from-success/10 to-transparent"
+            : "bg-gradient-to-b from-danger/10 to-transparent"
+        }`}
       >
-        <div className="text-center animate-slide-up">
-          {/* Main Success/Failure icon and Header */}
+        <div className="relative z-10 max-w-4xl mx-auto animate-fade-in">
           <div
-            className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 shadow-sm ${
-              isPass ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+            className={`inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-6 shadow-2xl transition-transform hover:scale-110 duration-500 ${
+              isPass
+                ? "bg-success text-white rotate-12"
+                : "bg-danger text-white -rotate-12"
             }`}
           >
             {isPass ? (
               <svg
-                className="w-8 h-8"
+                className="w-10 h-10"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -145,12 +214,12 @@ export default function Submitted({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2.5}
-                  d="M5 13l4 4L19 7"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
             ) : (
               <svg
-                className="w-8 h-8"
+                className="w-10 h-10"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -159,89 +228,127 @@ export default function Submitted({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2.5}
-                  d="M6 18L18 6M6 6l12 12"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
                 />
               </svg>
             )}
           </div>
 
-          <h1 className="text-3xl font-bold text-foreground mb-2 tracking-tight">
-            Exam Submitted
+          <h1 className="text-4xl md:text-5xl font-black text-foreground mb-3 tracking-tight">
+            {isPass ? "Excellent Work!" : "Attempt Completed"}
           </h1>
-          <p className="text-base text-muted-foreground mb-6">
-            {examTitle || "Your assessment"} has been recorded.
+          <p className="text-lg text-muted-foreground max-w-lg mx-auto">
+            You&apos;ve successfully finished the <strong>{examTitle}</strong>{" "}
+            assessment.
           </p>
+        </div>
+      </div>
 
-          <div
-            className={`glass-card p-6 mb-8 border ${isPass ? "border-success/20 shadow-[0_4px_20px_rgba(22,163,74,0.1)] bg-success/[0.02]" : "border-danger/20 shadow-[0_4px_20px_rgba(220,38,38,0.1)] bg-danger/[0.02]"}`}
-          >
-            <div className="mb-6 text-center">
-              <p className="text-sm text-muted-foreground mb-2 uppercase tracking-widest font-semibold">
+      {/* ──────────────────────── SCORE CARD ──────────────────────── */}
+      <div className="max-w-4xl mx-auto px-4 -mt-20 relative z-20">
+        <div className="glass-card overflow-hidden border-none shadow-2xl bg-white dark:bg-slate-900/90 backdrop-blur-xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
+            <div className="p-8 flex flex-col items-center justify-center text-center space-y-4">
+              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Final Score
-              </p>
-              <div className="flex items-baseline justify-center gap-2">
-                <span
-                  className={`text-5xl font-black ${isPass ? "text-success" : "text-danger"}`}
-                >
-                  {score ?? 0}
-                </span>
-                <span className="text-2xl text-muted-foreground font-medium">
-                  / {maxScore ?? 0}
-                </span>
+              </span>
+              <div className="relative">
+                <svg className="w-32 h-32 transform -rotate-90">
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="58"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    className="text-slate-100 dark:text-slate-800"
+                  />
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="58"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    strokeDasharray={364.4}
+                    strokeDashoffset={364.4 - (364.4 * percentage) / 100}
+                    strokeLinecap="round"
+                    className={`transition-all duration-1000 ease-out ${isPass ? "text-success" : "text-danger"}`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-black text-foreground">
+                    {score ?? 0}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-bold">
+                    / {maxScore ?? 0}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="w-full bg-muted/40 h-3 rounded-full overflow-hidden mb-6 relative">
-              <div
-                className={`h-full transition-all duration-1500 ease-out absolute left-0 top-0 ${isPass ? "bg-success" : "bg-danger"}`}
-                style={{ width: `${percentage}%` }}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-sm mt-2">
-              <div className="p-4 rounded-xl bg-card border border-border flex flex-col items-center justify-center text-center">
-                <p className="text-muted-foreground text-xs mb-1 uppercase tracking-wider">
+            <div className="p-8 md:col-span-2 grid grid-cols-2 gap-6 items-center">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                   Accuracy
                 </p>
-                <p className="text-foreground font-bold text-xl">
+                <p
+                  className={`text-4xl font-black ${isPass ? "text-success" : "text-danger"}`}
+                >
                   {percentage}%
                 </p>
               </div>
-              <div
-                className={`p-4 rounded-xl border flex flex-col items-center justify-center text-center ${isPass ? "bg-success/5 border-success/30" : "bg-danger/5 border-danger/30"}`}
-              >
-                <p className="text-muted-foreground text-xs mb-1 uppercase tracking-wider">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                   Status
                 </p>
-                <p
-                  className={`font-black text-xl uppercase tracking-wider ${isPass ? "text-success" : "text-danger"}`}
+                <span
+                  className={`inline-block px-3 py-1 rounded-full text-xs font-black uppercase ${
+                    isPass ? "bg-success text-white" : "bg-danger text-white"
+                  }`}
                 >
-                  {isPass ? "OH YOU PASSED!" : "NEED IMPROVEMENTS :-)"}
-                </p>
+                  {isPass ? "OH YOU PASSED" : "NEED IMPROVEMENTS"}
+                </span>
               </div>
-            </div>
-
-            <div className="mt-6 pt-5 border-t border-border/50 text-xs text-muted-foreground text-center">
-              <p>
-                <span className="font-medium">Timestamp:</span>{" "}
-                {submittedAt || "Processing..."}
-              </p>
+              <div className="col-span-2 pt-4 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {submittedAt}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-6 flex flex-col sm:flex-row gap-4 border-t border-border">
             <button
               onClick={handleToggleReview}
-              className="flex-1 px-6 py-4 rounded-2xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-all shadow-lg flex items-center justify-center gap-2"
+              disabled={loadingResults}
+              className={`flex-1 px-8 py-4 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-3 shadow-xl ${
+                showReview
+                  ? "bg-slate-200 dark:bg-slate-700 text-foreground"
+                  : "bg-primary text-white hover:bg-primary-hover hover:scale-[1.02]"
+              }`}
             >
               {loadingResults ? (
                 <div
-                  className="spinner"
-                  style={{ width: 16, height: 16, borderTopColor: "white" }}
+                  className="spinner !border-t-white"
+                  style={{ width: 18, height: 18 }}
                 />
               ) : (
                 <svg
-                  className="w-5 h-5 flex-shrink-0"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -250,27 +357,24 @@ export default function Submitted({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                   />
                 </svg>
               )}
-              {showReview ? "Hide Answers" : "Review Answers"}
+              {showReview ? "Hide Answers" : "Review My Responses"}
             </button>
             <button
               onClick={() => router.push("/exam/join")}
-              className="flex-1 px-6 py-4 rounded-2xl text-sm font-bold bg-card border border-border text-foreground hover:bg-card-hover transition-all shadow-lg"
+              className="flex-1 px-8 py-4 rounded-2xl text-sm font-bold bg-white dark:bg-slate-900 border border-border text-foreground hover:bg-slate-100 transition-all shadow-lg flex items-center justify-center gap-3"
             >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-
-        {/* RESULTS REVIEW SECTION */}
-        {showReview && results.length > 0 && (
-          <div className="animate-slide-up space-y-6 pt-8 border-t border-border mt-4">
-            <h2 className="text-xl font-bold text-foreground flex items-center gap-2 mb-6">
               <svg
-                className="w-6 h-6 text-primary"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -279,166 +383,193 @@ export default function Submitted({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
                 />
               </svg>
-              Detailed Answers
-            </h2>
+              Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
 
-            {results.map((r, index) => {
-              const isCorrect = r.selectedOptionId === r.correctOptionId;
+      {/* ──────────────────────── DETAILED REVIEW ──────────────────────── */}
+      {showReview && (
+        <div className="max-w-4xl mx-auto px-4 mt-12 animate-slide-up">
+          <div className="sticky top-6 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-border flex flex-wrap items-center justify-between gap-3 shadow-lg mb-8">
+            <h2 className="px-4 text-sm font-bold text-foreground">
+              Examination Review
+            </h2>
+            <div className="flex items-center gap-1">
+              {(["All", "Correct", "Incorrect", "Skipped"] as const).map(
+                (f) => {
+                  // If results are not published, only show All and Skipped filters
+                  if (!isPublished && (f === "Correct" || f === "Incorrect"))
+                    return null;
+
+                  const count = results.filter((r) => {
+                    if (f === "All") return true;
+                    if (!isPublished && f === "Skipped")
+                      return !r.selectedOptionId;
+                    if (f === "Correct")
+                      return r.selectedOptionId === r.correctOptionId;
+                    if (f === "Incorrect")
+                      return (
+                        r.selectedOptionId &&
+                        r.selectedOptionId !== r.correctOptionId
+                      );
+                    if (f === "Skipped") return !r.selectedOptionId;
+                    return true;
+                  }).length;
+
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f)}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
+                        filter === f
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:bg-slate-100"
+                      }`}
+                    >
+                      {f} <span className="opacity-50">{count}</span>
+                    </button>
+                  );
+                },
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {filteredResults.map((r) => {
+              const isCorrect =
+                isPublished && r.selectedOptionId === r.correctOptionId;
+              const isWrong =
+                isPublished &&
+                r.selectedOptionId &&
+                r.selectedOptionId !== r.correctOptionId;
               const isSkipped = !r.selectedOptionId;
 
               return (
-                <div key={r.id} className="glass-card p-6 border border-border">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center font-bold text-sm text-foreground">
-                        {index + 1}
+                <div
+                  key={r.id}
+                  className={`glass-card overflow-hidden border-l-8 ${
+                    isPublished
+                      ? isCorrect
+                        ? "border-l-success"
+                        : isSkipped
+                          ? "border-l-amber-500"
+                          : "border-l-danger"
+                      : "border-l-primary"
+                  }`}
+                >
+                  <div className="p-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        Question {results.findIndex((i) => i.id === r.id) + 1}
                       </span>
-                      <div>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-border/50 text-muted-foreground uppercase tracking-wide">
-                          {r.topic}
+                      {isPublished && (
+                        <span
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                            isCorrect
+                              ? "bg-success/10 text-success"
+                              : isSkipped
+                                ? "bg-amber-500/10 text-amber-500"
+                                : "bg-danger/10 text-danger"
+                          }`}
+                        >
+                          {isCorrect
+                            ? "Correct"
+                            : isSkipped
+                              ? "Skipped"
+                              : "Incorrect"}
                         </span>
-                      </div>
+                      )}
                     </div>
-                    {isCorrect ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-success bg-success/10 px-2 py-1 rounded-lg">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>{" "}
-                        Correct
-                      </span>
-                    ) : isSkipped ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-warning bg-warning/10 px-2 py-1 rounded-lg">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                          />
-                        </svg>{" "}
-                        Skipped
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-danger bg-danger/10 px-2 py-1 rounded-lg">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>{" "}
-                        Incorrect
-                      </span>
-                    )}
-                  </div>
 
-                  <p className="text-lg font-medium text-foreground mb-4 leading-relaxed">
-                    {r.question}
-                  </p>
+                    <h3 className="text-xl font-bold text-foreground">
+                      {r.question}
+                    </h3>
 
-                  {r.questionType === "code-output" && r.codeSnippet && (
-                    <div className="mb-4 text-left">
-                      <pre className="code-block whitespace-pre-wrap text-sm">
+                    {r.questionType === "code-output" && r.codeSnippet && (
+                      <pre className="code-block bg-slate-950 text-slate-100 p-6 rounded-2xl overflow-x-auto text-sm">
                         <code>{r.codeSnippet}</code>
                       </pre>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="space-y-2 mb-4 text-left">
-                    {r.options.map((opt) => {
-                      const isOpCorrect = opt.id === r.correctOptionId;
-                      const isOpSelected = opt.id === r.selectedOptionId;
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {r.options.map((opt) => {
+                        const isUserChoice = opt.id === r.selectedOptionId;
+                        const isTheCorrectAnswer =
+                          isPublished && opt.id === r.correctOptionId;
 
-                      let optionClasses =
-                        "p-3 rounded-xl border transition-all text-sm flex items-start gap-3 ";
+                        let stateClass =
+                          "border-border bg-white dark:bg-slate-900 text-muted-foreground";
 
-                      if (isOpCorrect) {
-                        optionClasses +=
-                          "border-success bg-success/5 text-success";
-                      } else if (isOpSelected && !isOpCorrect) {
-                        optionClasses +=
-                          "border-danger bg-danger/5 text-danger";
-                      } else {
-                        optionClasses +=
-                          "border-border bg-card text-muted-foreground opacity-50";
-                      }
+                        if (isTheCorrectAnswer) {
+                          stateClass =
+                            "border-success bg-success/5 text-success font-bold";
+                        } else if (isUserChoice && isWrong) {
+                          stateClass =
+                            "border-danger bg-danger/5 text-danger font-bold";
+                        } else if (isUserChoice && !isPublished) {
+                          stateClass =
+                            "border-primary bg-primary/5 text-primary font-bold shadow-[0_0_15px_rgba(79,70,229,0.1)]";
+                        }
 
-                      return (
-                        <div key={opt.id} className={optionClasses}>
-                          <span
-                            className={`flex-shrink-0 w-6 h-6 rounded flex items-center justify-center font-bold text-xs ${
-                              isOpCorrect
-                                ? "bg-success text-white"
-                                : isOpSelected
-                                  ? "bg-danger text-white"
-                                  : "bg-border text-muted-foreground"
-                            }`}
+                        return (
+                          <div
+                            key={opt.id}
+                            className={`relative p-4 rounded-2xl border-2 transition-all flex items-start gap-4 ${stateClass}`}
                           >
-                            {opt.id}
-                          </span>
-                          <span className="pt-0.5 leading-tight">
-                            {opt.text}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                            <div
+                              className={`w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-xs font-black ${
+                                isTheCorrectAnswer
+                                  ? "bg-success text-white"
+                                  : isUserChoice && isWrong
+                                    ? "bg-danger text-white"
+                                    : isUserChoice && !isPublished
+                                      ? "bg-primary text-white"
+                                      : "bg-slate-100 dark:bg-slate-800"
+                              }`}
+                            >
+                              {opt.id}
+                            </div>
+                            <span className="text-sm pt-0.5 flex-1">
+                              {opt.text}
+                            </span>
 
-                  {r.explanation && (
-                    <div className="mt-4 p-4 rounded-xl bg-card border border-border text-left">
-                      <div className="flex items-center gap-2 mb-1">
-                        <svg
-                          className="w-4 h-4 text-primary"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        <p className="text-sm font-semibold text-foreground">
+                            {isUserChoice && (
+                              <span className="absolute -top-2.5 right-4 px-2 py-0.5 bg-slate-900 text-white text-[9px] font-black rounded-full uppercase">
+                                Your Choice
+                              </span>
+                            )}
+                            {isTheCorrectAnswer && !isUserChoice && (
+                              <span className="absolute -top-2.5 right-4 px-2 py-0.5 bg-success text-white text-[9px] font-black rounded-full uppercase">
+                                Correct Answer
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {isPublished && r.explanation && (
+                      <div className="mt-4 p-5 rounded-2xl bg-slate-100 dark:bg-slate-800/50 border border-border">
+                        <p className="text-xs font-black uppercase tracking-widest text-foreground mb-2">
                           Explanation
                         </p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {r.explanation}
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed pl-6">
-                        {r.explanation}
-                      </p>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
