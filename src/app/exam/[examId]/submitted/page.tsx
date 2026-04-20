@@ -490,7 +490,7 @@ export default function Submitted({
                       {r.question}
                     </h3>
 
-                    {r.questionType === "code-output" && r.codeSnippet && (
+                    {r.codeSnippet && (
                       <pre className="code-block bg-slate-950 text-slate-100 p-6 rounded-2xl overflow-x-auto text-sm">
                         <code>{r.codeSnippet}</code>
                       </pre>

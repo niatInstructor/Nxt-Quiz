@@ -67,7 +67,6 @@ function TakeExamContent({ examId }: { examId: string }) {
     if (startQuestionId && questions.length > 0) {
       const index = questions.findIndex((q) => q.id === startQuestionId);
       if (index !== -1) {
-         
         setCurrentIndex(index);
       }
     }
@@ -85,7 +84,7 @@ function TakeExamContent({ examId }: { examId: string }) {
         // Only trigger if attempt is active and loaded
         setShowTabWarning(true);
         try {
-        // SEC-11: No client-supplied attemptId — server derives it from session
+          // SEC-11: No client-supplied attemptId — server derives it from session
           await fetch(`/api/exam/${examId}/proctor`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -98,8 +97,23 @@ function TakeExamContent({ examId }: { examId: string }) {
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [attemptId, examId, loading]);
+
+  // Proctoring: Prevent Right Click and Copy
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+    const handleCopy = (e: ClipboardEvent) => e.preventDefault();
+
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("copy", handleCopy);
+
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("copy", handleCopy);
+    };
+  }, []);
 
   // Realtime subscription for time extensions
   useEffect(() => {
@@ -124,9 +138,12 @@ function TakeExamContent({ examId }: { examId: string }) {
             const nowMs = Date.now() + serverDrift;
             const remaining = Math.max(0, Math.floor((dueAtMs - nowMs) / 1000));
             setTimeLeft(remaining);
-            console.log("⏰ Time extended (Personal)! New remaining:", remaining);
+            console.log(
+              "⏰ Time extended (Personal)! New remaining:",
+              remaining,
+            );
           }
-        }
+        },
       )
       .subscribe();
 
@@ -150,7 +167,7 @@ function TakeExamContent({ examId }: { examId: string }) {
             setTimeLeft(remaining);
             console.log("🌍 Time extended (Global)! New remaining:", remaining);
           }
-        }
+        },
       )
       .subscribe();
 
@@ -174,7 +191,7 @@ function TakeExamContent({ examId }: { examId: string }) {
     };
 
     // Initial check
-     
+
     setIsFullScreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handleFullScreenChange);
     // Initial enter
@@ -194,7 +211,7 @@ function TakeExamContent({ examId }: { examId: string }) {
       } = await supabase.auth.getUser();
 
       let userId = user?.id;
-      if (!userId && (process.env.NEXT_PUBLIC_ENVIRONMENT === "local")) {
+      if (!userId && process.env.NEXT_PUBLIC_ENVIRONMENT === "local") {
         userId = "00000000-0000-0000-0000-000000000001";
       }
 
@@ -229,7 +246,7 @@ function TakeExamContent({ examId }: { examId: string }) {
       const serverNow = serverTimeData
         ? new Date(serverTimeData).getTime()
         : Date.now();
-      
+
       setServerDrift(serverNow - Date.now());
 
       const dueAt = new Date(attempt.server_due_at).getTime();
@@ -239,7 +256,9 @@ function TakeExamContent({ examId }: { examId: string }) {
       // Get questions (without correct answers — view includes them)
       const { data: examQuestions } = await supabase
         .from("student_exam_questions")
-        .select("id, topic, difficulty, question_type, question, code_snippet, options, position, points")
+        .select(
+          "id, topic, difficulty, question_type, question, code_snippet, options, position, points",
+        )
         .eq("exam_id", examId)
         .order("position");
 
@@ -341,7 +360,7 @@ function TakeExamContent({ examId }: { examId: string }) {
         setSaving(false);
       }, 500);
     },
-    [attemptId, examId]
+    [attemptId, examId],
   );
 
   const selectOption = (questionId: string, optionId: string) => {
@@ -411,8 +430,7 @@ function TakeExamContent({ examId }: { examId: string }) {
 
   const getQuestionStatus = (qId: string) => {
     const a = answers[qId];
-    if (!a)
-      return "unanswered";
+    if (!a) return "unanswered";
     if (a.selected_option_id) return "answered";
     if (a.is_bookmarked) return "bookmarked";
     if (a.is_skipped) return "skipped";
@@ -423,7 +441,10 @@ function TakeExamContent({ examId }: { examId: string }) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center animate-fade-in">
-          <div className="spinner mx-auto mb-4" style={{ width: 40, height: 40 }} />
+          <div
+            className="spinner mx-auto mb-4"
+            style={{ width: 40, height: 40 }}
+          />
           <p className="text-muted-foreground">Loading exam...</p>
         </div>
       </div>
@@ -437,7 +458,7 @@ function TakeExamContent({ examId }: { examId: string }) {
   const isUrgent = timeLeft !== null && timeLeft < 300;
 
   const answeredCount = Object.values(answers).filter(
-    (a) => a.selected_option_id
+    (a) => a.selected_option_id,
   ).length;
 
   return (
@@ -505,22 +526,21 @@ function TakeExamContent({ examId }: { examId: string }) {
             </div>
 
             {/* Code snippet */}
-            {currentQuestion.questionType === "code-output" &&
-              currentQuestion.codeSnippet && (
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Code
-                    </span>
-                    <span className="text-xs text-muted px-2 py-0.5 rounded bg-border/50">
-                      React / JSX
-                    </span>
-                  </div>
-                  <pre className="code-block whitespace-pre-wrap">
-                    <code>{currentQuestion.codeSnippet}</code>
-                  </pre>
+            {currentQuestion.codeSnippet && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Code
+                  </span>
+                  <span className="text-xs text-muted px-2 py-0.5 rounded bg-border/50">
+                    React / JSX
+                  </span>
                 </div>
-              )}
+                <pre className="code-block whitespace-pre-wrap">
+                  <code>{currentQuestion.codeSnippet}</code>
+                </pre>
+              </div>
+            )}
 
             {/* Options */}
             <div className="space-y-3">
@@ -530,9 +550,7 @@ function TakeExamContent({ examId }: { examId: string }) {
                 return (
                   <button
                     key={option.id}
-                    onClick={() =>
-                      selectOption(currentQuestion.id, option.id)
-                    }
+                    onClick={() => selectOption(currentQuestion.id, option.id)}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 hover:scale-[1.01] ${
                       isSelected
                         ? "border-primary bg-primary/10 text-foreground"
@@ -569,29 +587,72 @@ function TakeExamContent({ examId }: { examId: string }) {
                       : "bg-card border border-border text-muted-foreground hover:border-border-hover"
                   }`}
                 >
-                  <span className="flex items-center gap-1.5"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>{currentAnswer?.is_bookmarked ? "Bookmarked" : "Bookmark"}</span>
+                  <span className="flex items-center gap-1.5">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                      />
+                    </svg>
+                    {currentAnswer?.is_bookmarked ? "Bookmarked" : "Bookmark"}
+                  </span>
                 </button>
                 <button
                   onClick={() => skipQuestion(currentQuestion.id)}
                   className="px-4 py-2 rounded-xl text-sm font-medium bg-card border border-border text-muted-foreground hover:border-border-hover transition-all"
                 >
-                  <span className="flex items-center gap-1.5"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>Skip</span>
+                  <span className="flex items-center gap-1.5">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                      />
+                    </svg>
+                    Skip
+                  </span>
                 </button>
                 {currentAnswer?.selected_option_id && (
                   <button
                     onClick={() => clearAnswer(currentQuestion.id)}
                     className="px-4 py-2 rounded-xl text-sm font-medium bg-danger/10 border border-danger/20 text-danger hover:bg-danger/20 transition-all"
                   >
-                    <span className="flex items-center gap-1.5"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>Clear</span>
+                    <span className="flex items-center gap-1.5">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                      Clear
+                    </span>
                   </button>
                 )}
               </div>
 
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() =>
-                    setCurrentIndex(Math.max(0, currentIndex - 1))
-                  }
+                  onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
                   disabled={currentIndex === 0}
                   className="px-5 py-2.5 rounded-xl text-sm font-medium bg-card border border-border text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:bg-card-hover transition-all"
                 >
@@ -599,9 +660,7 @@ function TakeExamContent({ examId }: { examId: string }) {
                 </button>
                 {currentIndex === questions.length - 1 ? (
                   <button
-                    onClick={() =>
-                      router.push(`/exam/${examId}/review`)
-                    }
+                    onClick={() => router.push(`/exam/${examId}/review`)}
                     className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02] active:scale-[0.98] transition-all glow-primary"
                   >
                     Review & Submit →
@@ -610,7 +669,7 @@ function TakeExamContent({ examId }: { examId: string }) {
                   <button
                     onClick={() =>
                       setCurrentIndex(
-                        Math.min(questions.length - 1, currentIndex + 1)
+                        Math.min(questions.length - 1, currentIndex + 1),
                       )
                     }
                     className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02] active:scale-[0.98] transition-all"
@@ -630,9 +689,7 @@ function TakeExamContent({ examId }: { examId: string }) {
           }`}
         >
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-foreground">
-              Questions
-            </h3>
+            <h3 className="text-sm font-semibold text-foreground">Questions</h3>
             <button
               onClick={() => setShowNav(false)}
               className="text-muted hover:text-foreground text-xs"
@@ -719,16 +776,29 @@ function TakeExamContent({ examId }: { examId: string }) {
         <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="glass-card p-8 max-w-md w-full text-center animate-slide-up shadow-2xl border-danger/30">
             <div className="w-20 h-20 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              <svg
+                className="w-10 h-10 text-danger"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Warning!</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              Warning!
+            </h2>
             <p className="text-danger font-semibold mb-4 text-lg">
               What&apos;s up, Seems Like you cheated by tab switching
             </p>
             <p className="text-muted-foreground mb-8 text-sm">
-              Your activity has been logged and reported to the administrator. Multiple violations may lead to disqualification.
+              Your activity has been logged and reported to the administrator.
+              Multiple violations may lead to disqualification.
             </p>
             <button
               onClick={() => setShowTabWarning(false)}
@@ -745,13 +815,26 @@ function TakeExamContent({ examId }: { examId: string }) {
         <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden">
           <div className="glass-card p-8 max-w-md w-full text-center animate-slide-up shadow-2xl border-primary/20">
             <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              <svg
+                className="w-10 h-10 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Full Screen Required</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              Full Screen Required
+            </h2>
             <p className="text-muted-foreground mb-8 text-sm">
-              To maintain the integrity of the examination, you must stay in full screen mode. Leaving full screen is recorded as an event.
+              To maintain the integrity of the examination, you must stay in
+              full screen mode. Leaving full screen is recorded as an event.
             </p>
             <button
               onClick={enterFullScreen}
@@ -769,14 +852,20 @@ function TakeExamContent({ examId }: { examId: string }) {
   );
 }
 
-export default function TakeExam({ params }: { params: Promise<{ examId: string }> }) {
+export default function TakeExam({
+  params,
+}: {
+  params: Promise<{ examId: string }>;
+}) {
   const { examId } = use(params);
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner" style={{ width: 40, height: 40 }} />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="spinner" style={{ width: 40, height: 40 }} />
+        </div>
+      }
+    >
       <TakeExamContent examId={examId} />
     </Suspense>
   );

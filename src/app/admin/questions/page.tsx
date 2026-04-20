@@ -153,6 +153,8 @@ export default function QuestionBank() {
     try {
       const res = await fetch("/api/admin/hard-reset", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: "WIPE DATABASE" }),
       });
       if (res.ok) {
         alert("Database has been completely wiped clean.");
@@ -249,7 +251,7 @@ export default function QuestionBank() {
             onChange={(e) => setSearch(e.target.value)}
             className="px-4 py-2 rounded-xl bg-background border border-border text-sm w-full sm:w-48 focus:outline-none focus:border-primary transition-all shadow-sm"
           />
-          {questions.length > 0 && (
+          {questions.length > 0 && process.env.NEXT_PUBLIC_ENVIRONMENT === "local" && (
             <button
               onClick={handleHardReset}
               disabled={isDeletingAll}
