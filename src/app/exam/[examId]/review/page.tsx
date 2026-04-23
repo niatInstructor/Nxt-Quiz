@@ -1,6 +1,10 @@
 "use client";
 
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  hasActiveExamNavigationIntent,
+  markExamNavigationIntent,
+} from "@/lib/exam-navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
@@ -42,6 +46,10 @@ export default function ReviewExam({
   // Proctoring: Detect Tab Switch
   useEffect(() => {
     const handleVisibilityChange = async () => {
+      if (hasActiveExamNavigationIntent()) {
+        return;
+      }
+
       if (attemptId && document.hidden && !loading) {
         setShowTabWarning(true);
         try {
@@ -148,11 +156,13 @@ export default function ReviewExam({
 
   const handleBackToExam = () => {
     setIsNavigatingBack(true);
+    markExamNavigationIntent();
     router.push(`/exam/${examId}/take`);
   };
 
   const handleGoToQuestion = (questionId: string) => {
     setNavigatingToQuestion(questionId);
+    markExamNavigationIntent();
     router.push(`/exam/${examId}/take?q=${questionId}`);
   };
 
@@ -175,6 +185,7 @@ export default function ReviewExam({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ attemptId }),
       });
+      markExamNavigationIntent();
       router.push(`/exam/${examId}/submitted`);
     } catch {
       setSubmitting(false);

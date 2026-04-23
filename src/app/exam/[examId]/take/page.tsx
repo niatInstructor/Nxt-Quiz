@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  hasActiveExamNavigationIntent,
+  markExamNavigationIntent,
+} from "@/lib/exam-navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { useState, useEffect, useCallback, useRef, use, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -97,6 +101,10 @@ function TakeExamContent({ examId }: { examId: string }) {
   // Proctoring: Detect Tab Switch
   useEffect(() => {
     const handleVisibilityChange = async () => {
+      if (hasActiveExamNavigationIntent()) {
+        return;
+      }
+
       if (document.hidden && attemptId && !loading) {
         // Only trigger if attempt is active and loaded
         setShowTabWarning(true);
@@ -309,6 +317,7 @@ function TakeExamContent({ examId }: { examId: string }) {
     } catch {
       // ignore
     }
+    markExamNavigationIntent();
     router.push(`/exam/${examId}/submitted`);
   }, [examId, router]);
 
@@ -410,6 +419,7 @@ function TakeExamContent({ examId }: { examId: string }) {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
+      markExamNavigationIntent();
       router.push(`/exam/${examId}/review`);
     }
   };
@@ -677,7 +687,10 @@ function TakeExamContent({ examId }: { examId: string }) {
                 </button>
                 {currentIndex === questions.length - 1 ? (
                   <button
-                    onClick={() => router.push(`/exam/${examId}/review`)}
+                    onClick={() => {
+                      markExamNavigationIntent();
+                      router.push(`/exam/${examId}/review`);
+                    }}
                     className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02] active:scale-[0.98] transition-all glow-primary"
                   >
                     Review & Submit →
@@ -756,7 +769,10 @@ function TakeExamContent({ examId }: { examId: string }) {
           {/* Review button */}
           <div className="mt-6">
             <button
-              onClick={() => router.push(`/exam/${examId}/review`)}
+              onClick={() => {
+                markExamNavigationIntent();
+                router.push(`/exam/${examId}/review`);
+              }}
               className="w-full py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02] active:scale-[0.98] transition-all glow-primary"
             >
               Review & Submit
