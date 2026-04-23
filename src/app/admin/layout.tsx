@@ -14,8 +14,8 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Don't show sidebar for login page
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
@@ -68,9 +68,12 @@ export default function AdminLayout({
   const isActive = (href: string, exact: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
 
+  const toggleDesktopSidebar = () => {
+    setSidebarCollapsed((prev) => !prev);
+  };
+
   return (
-    <div className="min-h-screen flex">
-      {/* Mobile overlay */}
+    <div className="min-h-screen bg-background">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -78,48 +81,49 @@ export default function AdminLayout({
         />
       )}
 
-      {/* Sidebar — STD-06: responsive with mobile drawer */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 border-r border-border bg-card/95 backdrop-blur-md p-6 flex flex-col transform transition-transform duration-300 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 border-r border-border bg-card/95 backdrop-blur-md flex flex-col overflow-y-auto transform transition-all duration-300 ${
+          sidebarCollapsed ? "lg:w-20 lg:px-3" : "lg:w-64 lg:px-6"
+        } ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} w-64 px-6 py-6 lg:translate-x-0`}
       >
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-danger to-warning flex items-center justify-center">
               <span className="text-white font-bold">A</span>
             </div>
-            <div>
+            <div className={sidebarCollapsed ? "hidden lg:hidden" : ""}>
               <h1 className="text-sm font-bold text-foreground">
                 Admin Portal
               </h1>
               <p className="text-xs text-muted">Nxt-Quiz</p>
             </div>
           </div>
-          {/* Mobile close button */}
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1 text-muted-foreground hover:text-foreground"
-            aria-label="Close sidebar"
-          >
-            <svg
-              aria-hidden="true"
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-1 text-muted-foreground hover:text-foreground"
+              aria-label="Close sidebar"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+              <svg
+                aria-hidden="true"
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {isLocalDB && (
+        {isLocalDB && !sidebarCollapsed && (
           <div className="mb-6 px-3 py-2 rounded-lg bg-warning/10 border border-warning/20 flex items-center justify-center gap-2 text-warning text-[10px] font-bold uppercase tracking-widest">
             <svg
               aria-hidden="true"
@@ -145,11 +149,14 @@ export default function AdminLayout({
               key={link.href}
               href={link.href}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              className={`flex items-center py-2.5 rounded-xl text-sm font-medium transition-all ${
+                sidebarCollapsed ? "justify-center px-2" : "gap-3 px-4"
+              } ${
                 isActive(link.href, link.exact)
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-card-hover"
               }`}
+              title={sidebarCollapsed ? link.label : undefined}
             >
               <svg
                 aria-hidden="true"
@@ -173,15 +180,28 @@ export default function AdminLayout({
                   />
                 )}
               </svg>
-              {link.label}
+              <span className={sidebarCollapsed ? "hidden" : ""}>
+                {link.label}
+              </span>
             </Link>
           ))}
         </nav>
 
-        <div className="flex items-center justify-between gap-2 mt-2">
+        <div
+          className={`flex mt-2 ${
+            sidebarCollapsed
+              ? "flex-col items-center gap-2"
+              : "items-center justify-between gap-2"
+          }`}
+        >
           <button
             onClick={handleLogout}
-            className="flex flex-1 items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-danger hover:bg-danger/10 transition-all"
+            className={`flex items-center rounded-xl text-sm font-medium text-danger hover:bg-danger/10 transition-all ${
+              sidebarCollapsed
+                ? "justify-center w-10 h-10"
+                : "flex-1 gap-3 px-4 py-2.5"
+            }`}
+            title={sidebarCollapsed ? "Logout" : undefined}
           >
             <svg
               aria-hidden="true"
@@ -197,15 +217,17 @@ export default function AdminLayout({
                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
               />
             </svg>
-            Logout
+            <span className={sidebarCollapsed ? "hidden" : ""}>Logout</span>
           </button>
           <ThemeToggle />
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-y-auto">
-        {/* Mobile top bar */}
+      <div
+        className={`min-h-screen flex flex-col transition-[padding] duration-300 ${
+          sidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
+        }`}
+      >
         <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-card/50">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -232,7 +254,42 @@ export default function AdminLayout({
           </span>
           <ThemeToggle />
         </div>
-        <main className="flex-1">{children}</main>
+
+        <div className="hidden lg:flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-30">
+          <button
+            onClick={toggleDesktopSidebar}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card-hover transition-all"
+            aria-label={sidebarCollapsed ? "Open sidebar" : "Close sidebar"}
+          >
+            <svg
+              aria-hidden="true"
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              {sidebarCollapsed ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              )}
+            </svg>
+            <span>{sidebarCollapsed ? "Open Sidebar" : "Close Sidebar"}</span>
+          </button>
+          <ThemeToggle />
+        </div>
+
+        <main className="flex-1 min-w-0">{children}</main>
       </div>
     </div>
   );
