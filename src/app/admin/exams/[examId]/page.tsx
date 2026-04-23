@@ -350,7 +350,7 @@ export default function ExamControl({
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* Header & Metrics */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div>
@@ -374,7 +374,7 @@ export default function ExamControl({
               </svg>
             </Link>
             <h1
-              className="text-3xl font-bold text-foreground line-clamp-1 max-w-[400px]"
+              className="text-2xl sm:text-3xl font-bold text-foreground line-clamp-1 max-w-full md:max-w-[400px]"
               title={exam.title}
             >
               {exam.title}
@@ -610,7 +610,7 @@ export default function ExamControl({
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[900px] text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/5">
                     <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">
@@ -895,7 +895,7 @@ export default function ExamControl({
                 </button>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {(exam.status === "closed" ||
                   exam.status === "in_progress") && (
                   <Link
@@ -1034,7 +1034,7 @@ export default function ExamControl({
       {/* Edit Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="glass-card p-8 w-full max-w-md animate-slide-up">
+          <div className="glass-card p-6 sm:p-8 w-full max-w-md animate-slide-up">
             <h2 className="text-xl font-bold text-foreground mb-6">
               Edit Exam Settings
             </h2>
@@ -1053,7 +1053,7 @@ export default function ExamControl({
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-1">
                     Duration (min)

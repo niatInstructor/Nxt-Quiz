@@ -1,5 +1,6 @@
 "use client";
 
+import { FloatingThemeToggle } from "@/components/FloatingThemeToggle";
 import { createClient } from "@/lib/supabase/browser";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -50,14 +51,19 @@ export default function Onboarding() {
     let rpcError;
 
     if (!targetUserId && (process.env.NEXT_PUBLIC_ENVIRONMENT === "local")) {
-      // Direct insert for local dev without auth session
-      const { error } = await supabase.from("profiles").upsert({
-        id: "00000000-0000-0000-0000-000000000001", // Constant local dummy ID
-        student_college_id: trimmed,
-        full_name: "Local Student",
-        onboarded_at: new Date().toISOString()
+      // Use API route to bypass RLS in local dev
+      const res = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentCollegeId: trimmed,
+          fullName: userName
+        })
       });
-      rpcError = error;
+      if (!res.ok) {
+        const data = await res.json();
+        rpcError = { message: data.error || "Failed to complete onboarding" };
+      }
     } else {
       const { error } = await supabase.rpc("complete_onboarding", {
         p_student_college_id: trimmed,
@@ -80,6 +86,7 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
+      <FloatingThemeToggle />
       <div className="w-full max-w-md animate-slide-up">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-success to-accent mb-4 glow-success">

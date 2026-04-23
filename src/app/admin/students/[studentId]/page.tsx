@@ -90,7 +90,7 @@ export default function StudentDetails({
   });
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <button
         onClick={() => router.back()}
         className="mb-6 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -114,15 +114,15 @@ export default function StudentDetails({
               </div>
             </div>
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-muted-foreground">Email:</span>
-                <span className="text-foreground">{data.student.email}</span>
+                <span className="text-foreground break-all">{data.student.email}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-muted-foreground">Joined:</span>
                 <span className="text-foreground">{new Date(data.student.created_at).toLocaleDateString()}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-muted-foreground">Status:</span>
                 <span className="text-success font-medium">Active</span>
               </div>
@@ -171,8 +171,8 @@ export default function StudentDetails({
               <div className="p-6 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between sticky top-0 bg-card z-10 rounded-t-2xl gap-4">
                 <div>
                   <h2 className="text-lg font-bold text-foreground">Submission Review</h2>
-                  <div className="flex items-center gap-3 mt-1">
-                    <p className="text-sm text-muted-foreground">{attempt.exams?.title} • {attempt.exams?.exam_code}</p>
+                  <div className="flex flex-wrap items-center gap-3 mt-1">
+                    <p className="text-sm text-muted-foreground break-words">{attempt.exams?.title} • {attempt.exams?.exam_code}</p>
                     {attempt.tab_switch_count > 0 && (
                       <span className="flex items-center gap-1 text-[10px] font-bold text-danger bg-danger/10 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
@@ -182,7 +182,7 @@ export default function StudentDetails({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 bg-card border border-border p-1 rounded-xl">
+                <div className="flex flex-wrap items-center gap-1 bg-card border border-border p-1 rounded-xl">
                   {(["All", "Correct", "Incorrect", "Skipped"] as const).map((f) => {
                     const count = attempt.answers?.filter(ans => {
                       const isCorrect = ans.selected_option_id === ans.questions.correct_option_id;

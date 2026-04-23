@@ -16,7 +16,9 @@ export async function POST(request: Request) {
 
   // BUG-01: Fix operator precedence with parentheses
   let userId = user?.id;
-  if (!userId && (process.env.ENVIRONMENT === "local")) {
+  const isLocal = process.env.ENVIRONMENT === "local" || process.env.NEXT_PUBLIC_ENVIRONMENT === "local";
+  
+  if (!userId && isLocal) {
     userId = "00000000-0000-0000-0000-000000000001";
   }
 

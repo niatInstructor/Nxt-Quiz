@@ -1,5 +1,6 @@
 "use client";
 
+import { FloatingThemeToggle } from "@/components/FloatingThemeToggle";
 import { createClient } from "@/lib/supabase/browser";
 import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
@@ -96,6 +97,7 @@ export default function WaitingRoom({
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
+      <FloatingThemeToggle />
       <div className="w-full max-w-lg text-center animate-slide-up">
         {/* Pulsing icon */}
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-secondary mb-8 animate-pulse-glow">
@@ -110,8 +112,8 @@ export default function WaitingRoom({
         )}
 
         {/* Status card */}
-        <div className="glass-card p-8 mb-6">
-          <div className="grid grid-cols-2 gap-6 mb-8">
+        <div className="glass-card p-6 sm:p-8 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
             <div className="text-center">
               <p className="text-3xl font-bold text-accent">{participantCount}</p>
               <p className="text-xs text-muted-foreground mt-1">Students Joined</p>
@@ -131,7 +133,7 @@ export default function WaitingRoom({
           </div>
 
           {/* Waiting animation */}
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-muted-foreground">
             <span className="text-sm">Waiting for the instructor to start the exam</span>
             <span className="flex gap-1">
               <span className="w-1.5 h-1.5 bg-primary rounded-full dot-1" />

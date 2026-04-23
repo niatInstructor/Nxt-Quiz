@@ -52,5 +52,6 @@ next-env.d.ts
 # OS
 Desktop.ini
 
-DEPLOYMENT_GUIDE.md
-memory.md
+
+coding-editor.md
+LOCAL_DEV_FIXES.md

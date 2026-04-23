@@ -1,5 +1,6 @@
 "use client";
 
+import { FloatingThemeToggle } from "@/components/FloatingThemeToggle";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -30,6 +31,7 @@ export default function AdminLogin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
+      <FloatingThemeToggle />
       <div className="w-full max-w-sm animate-slide-up">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-danger to-warning mb-4 glow-danger">

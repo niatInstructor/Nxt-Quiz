@@ -16,7 +16,9 @@ export async function GET(
 
   // BUG-01: Fix operator precedence
   let userId = user?.id;
-  if (!userId && (process.env.ENVIRONMENT === "local")) {
+  const isLocal = process.env.ENVIRONMENT === "local" || process.env.NEXT_PUBLIC_ENVIRONMENT === "local";
+  
+  if (!userId && isLocal) {
     userId = "00000000-0000-0000-0000-000000000001";
   }
 
@@ -57,6 +59,14 @@ export async function GET(
     return NextResponse.json({ error: "Exam not found" }, { status: 404 });
   }
 
+  // Get user's attempt if it exists
+  const { data: attempt } = await admin
+    .from("attempts")
+    .select("id, server_due_at, status")
+    .eq("exam_id", examId)
+    .eq("user_id", userId)
+    .single();
+
   const { count } = await admin
     .from("exam_participants")
     .select("*", { count: "exact", head: true })
@@ -69,5 +79,6 @@ export async function GET(
     capacity: exam.capacity,
     durationSeconds: exam.duration_seconds,
     participantCount: count || 0,
+    attempt: attempt || null,
   });
 }

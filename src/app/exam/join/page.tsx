@@ -1,5 +1,6 @@
 "use client";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { createClient } from "@/lib/supabase/browser";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -67,7 +68,7 @@ export default function JoinExam() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-border">
+      <header className="flex flex-col gap-3 px-4 sm:px-6 py-4 border-b border-border sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
             <span className="text-white font-bold text-sm">N</span>
@@ -76,7 +77,8 @@ export default function JoinExam() {
             Nxt-Quiz
           </span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end">
+          <ThemeToggle />
           <button
             onClick={() => router.push("/scores")}
             className="text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2"
@@ -125,7 +127,7 @@ export default function JoinExam() {
             </p>
           </div>
 
-          <div className="glass-card p-8">
+          <div className="glass-card p-6 sm:p-8">
             <form onSubmit={handleJoin} className="space-y-6">
               {error && (
                 <div className="p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm animate-fade-in">

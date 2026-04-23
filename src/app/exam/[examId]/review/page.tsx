@@ -1,5 +1,6 @@
 "use client";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { createClient } from "@/lib/supabase/browser";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
@@ -94,57 +95,37 @@ export default function ReviewExam({
 
   useEffect(() => {
     const loadData = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const res = await fetch(`/api/exam/${examId}/review-init`);
+        if (!res.ok) {
+          if (res.status === 401) {
+            router.push("/login");
+          } else if (res.status === 404) {
+            router.push(`/exam/${examId}/submitted`);
+          }
+          return;
+        }
 
-      let userId = user?.id;
-      if (!userId && process.env.ENVIRONMENT === "local") {
-        userId = "00000000-0000-0000-0000-000000000001";
+        const data = await res.json();
+        const { attempt, questions: examQuestions, answers: ans, serverNow } = data;
+
+        if (attempt.status === "submitted") {
+          return router.push(`/exam/${examId}/submitted`);
+        }
+        setAttemptId(attempt.id);
+
+        setServerDrift(serverNow - Date.now());
+
+        const dueAt = new Date(attempt.server_due_at).getTime();
+        const remaining = Math.max(0, Math.floor((dueAt - serverNow) / 1000));
+        setTimeLeft(remaining);
+
+        if (examQuestions) setQuestions(examQuestions);
+        if (ans) setAnswers(ans);
+        setLoading(false);
+      } catch (err) {
+        console.error("Failed to load review data:", err);
       }
-
-      if (!userId) return router.push("/login");
-
-      const { data: attempt } = await supabase
-        .from("attempts")
-        .select("id, server_due_at, status")
-        .eq("exam_id", examId)
-        .eq("user_id", userId)
-        .single();
-
-      if (!attempt || attempt.status === "submitted") {
-        return router.push(`/exam/${examId}/submitted`);
-      }
-      setAttemptId(attempt.id);
-
-      // Calculate time remaining using server time and store drift
-      const { data: serverTimeData } = await supabase.rpc("get_server_time");
-      const serverNow = serverTimeData
-        ? new Date(serverTimeData).getTime()
-        : Date.now();
-      
-      setServerDrift(serverNow - Date.now());
-
-      const dueAt = new Date(attempt.server_due_at).getTime();
-      const remaining = Math.max(0, Math.floor((dueAt - serverNow) / 1000));
-      setTimeLeft(remaining);
-
-      const { data: examQs } = await supabase
-        .from("student_exam_questions")
-        .select("id, topic, question, position")
-        .eq("exam_id", examId)
-        .order("position");
-
-      if (examQs) setQuestions(examQs);
-
-      const { data: ans } = await supabase
-        .from("attempt_answers")
-        .select("question_id, selected_option_id, is_bookmarked, is_skipped")
-        .eq("attempt_id", attempt.id);
-
-      if (ans) setAnswers(ans);
-      setLoading(false);
     };
     loadData();
   }, [examId, router]);
@@ -242,21 +223,24 @@ export default function ReviewExam({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-50 bg-card/90 backdrop-blur-lg border-b border-border px-6 py-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-card/90 backdrop-blur-lg border-b border-border px-4 sm:px-6 py-3">
+        <div className="max-w-4xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-lg font-semibold text-foreground">Review & Submit</h1>
-          {timeLeft !== null && (
-            <div className={`px-4 py-2 rounded-xl font-mono font-bold text-lg ${
-              isUrgent ? "bg-danger/10 text-danger animate-timer-urgent" : "bg-primary/10 text-primary"
-            }`}>
-              {formatTime(timeLeft)}
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            {timeLeft !== null && (
+              <div className={`px-4 py-2 rounded-xl font-mono font-bold text-lg ${
+                isUrgent ? "bg-danger/10 text-danger animate-timer-urgent" : "bg-primary/10 text-primary"
+              }`}>
+                {formatTime(timeLeft)}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full p-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 animate-slide-up">
+      <main className="flex-1 max-w-4xl mx-auto w-full p-4 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8 animate-slide-up">
           <div className="glass-card p-5 text-center">
             <p className="text-3xl font-bold text-success">{answered.length}</p>
             <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1"><IconCheck /> Answered</p>
@@ -300,11 +284,11 @@ export default function ReviewExam({
                     key={q.id}
                     disabled={navigatingToQuestion !== null || isNavigatingBack || submitting || isOpeningConfirm}
                     onClick={() => handleGoToQuestion(q.id)}
-                    className="w-full text-left p-3 rounded-xl bg-card border border-border hover:border-border-hover hover:bg-card-hover transition-all text-sm disabled:opacity-70 flex items-center justify-between"
+                    className="w-full text-left p-3 rounded-xl bg-card border border-border hover:border-border-hover hover:bg-card-hover transition-all text-sm disabled:opacity-70 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div className="flex items-center">
+                    <div className="flex min-w-0 items-center">
                       <span className="text-muted-foreground mr-2">Q{questions.indexOf(q) + 1}.</span>
-                      <span className="text-foreground">
+                      <span className="text-foreground break-words">
                         {q.question.length > 80 ? q.question.slice(0, 80) + "..." : q.question}
                       </span>
                       <span className="text-xs text-muted ml-2">[{q.topic}]</span>
@@ -318,7 +302,7 @@ export default function ReviewExam({
             </div>
           ))}
 
-        <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
+        <div className="mt-8 pt-6 border-t border-border flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             onClick={handleBackToExam}
             disabled={isNavigatingBack || submitting || isOpeningConfirm || navigatingToQuestion !== null}

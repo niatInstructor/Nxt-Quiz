@@ -230,7 +230,7 @@ export default function AdminLayout({
           <span className="text-sm font-bold text-foreground">
             Nxt-Quiz Admin
           </span>
-          <div className="w-9" /> {/* Spacer for centering */}
+          <ThemeToggle />
         </div>
         <main className="flex-1">{children}</main>
       </div>

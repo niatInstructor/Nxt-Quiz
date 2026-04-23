@@ -59,7 +59,7 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Exam Dashboard</h1>
@@ -146,7 +146,7 @@ export default function AdminDashboard() {
                       <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                         {exam.title}
                       </h3>
-                      <div className="flex items-center gap-6 text-xs text-muted-foreground mt-3">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs text-muted-foreground mt-3">
                         <div className="flex items-center gap-1.5">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                           {exam.participant_count || 0} students

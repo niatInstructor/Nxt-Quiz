@@ -439,7 +439,7 @@ export default function Analytics({
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto">
       {/* ═══════════════════════ SECTION 1: EXAM HEADER ═══════════════════════ */}
       <div className="mb-8">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -466,7 +466,7 @@ export default function Analytics({
             <h1 className="text-2xl font-bold text-foreground mt-1">
               {examMeta.title}
             </h1>
-            <div className="flex items-center gap-3 mt-2">
+            <div className="flex flex-wrap items-center gap-3 mt-2">
               <span className="font-mono text-sm text-accent font-bold">
                 {examMeta.examCode}
               </span>
@@ -481,7 +481,7 @@ export default function Analytics({
               </span>
             </div>
             {/* Timeline */}
-            <div className="flex items-center gap-4 mt-3 text-[11px] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-3 text-[11px] text-muted-foreground">
               <span>
                 Created: {new Date(examMeta.createdAt).toLocaleDateString()}
               </span>
@@ -497,7 +497,7 @@ export default function Analytics({
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={exportCSV}
               className="px-5 py-2.5 rounded-xl text-sm font-medium bg-card border border-border text-foreground hover:bg-card-hover transition-all flex items-center gap-2"
@@ -837,7 +837,7 @@ export default function Analytics({
       {activeTab === "questions" && (
         <div className="space-y-6 animate-fade-in">
           <div className="glass-card overflow-hidden">
-            <div className="p-5 border-b border-border flex items-center justify-between">
+            <div className="p-5 border-b border-border flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-sm font-semibold text-foreground">
                 Question-by-Question Analysis ({data.detailedQuestions.length})
               </h3>
@@ -846,7 +846,7 @@ export default function Analytics({
               </p>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[980px] text-sm">
                 <thead>
                   <tr className="border-b border-border bg-card/50">
                     {[
@@ -1106,13 +1106,13 @@ export default function Analytics({
               <h3 className="text-sm font-semibold text-foreground">
                 Student Leaderboard ({data.studentResults.length} submitted)
               </h3>
-              <div className="flex items-center gap-3">
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
                 <input
                   type="text"
                   value={studentSearch}
                   onChange={(e) => setStudentSearch(e.target.value)}
                   placeholder="Search name, email, or ID..."
-                  className="px-4 py-2 rounded-xl bg-background border border-border text-foreground text-sm placeholder:text-muted focus:outline-none focus:border-primary transition-all w-64"
+                  className="px-4 py-2 rounded-xl bg-background border border-border text-foreground text-sm placeholder:text-muted focus:outline-none focus:border-primary transition-all w-full sm:w-64"
                 />
                 <button
                   onClick={exportCSV}
@@ -1123,7 +1123,7 @@ export default function Analytics({
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[980px] text-sm">
                 <thead>
                   <tr className="border-b border-border bg-card/50">
                     {[
@@ -1241,7 +1241,7 @@ export default function Analytics({
       {activeTab === "time" && (
         <div className="space-y-6 animate-fade-in">
           {/* Time KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               {
                 label: "Exam Duration",
@@ -1288,7 +1288,7 @@ export default function Analytics({
             <h3 className="text-sm font-semibold text-foreground mb-4">
               Submission Timing Breakdown
             </h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-5 rounded-xl bg-success/5 border border-success/10 text-center">
                 <p className="text-3xl font-bold text-success">
                   {timeAnalytics.earlySubmissions}

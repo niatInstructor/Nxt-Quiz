@@ -220,7 +220,7 @@ export default function QuestionBank() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Question Bank</h1>
@@ -348,8 +348,8 @@ export default function QuestionBank() {
                 key={examName}
                 className="glass-card overflow-hidden animate-fade-in shadow-sm border border-border"
               >
-                <div className="bg-card-hover px-6 py-4 border-b border-border flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-foreground">
+                <div className="bg-card-hover px-4 sm:px-6 py-4 border-b border-border flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <h2 className="text-sm font-bold text-foreground break-words">
                     {examName}
                   </h2>
                   <span className="text-xs font-bold px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
@@ -357,7 +357,7 @@ export default function QuestionBank() {
                   </span>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
+                  <table className="w-full min-w-[680px] text-sm text-left">
                     <thead className="bg-card/30">
                       <tr className="border-b border-border/50">
                         <th className="p-4 text-muted-foreground font-medium w-1/2">
@@ -481,12 +481,12 @@ export default function QuestionBank() {
       {/* Add/Edit Modal */}
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="glass-card p-8 w-full max-w-2xl my-8 animate-slide-up">
+          <div className="glass-card p-6 sm:p-8 w-full max-w-2xl my-8 animate-slide-up">
             <h2 className="text-xl font-bold text-foreground mb-6">
               {editingId ? "Edit Question" : "Add New Question"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-1">
                     Topic

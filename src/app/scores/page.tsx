@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/browser";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -30,48 +30,31 @@ export default function MyScores() {
 
   useEffect(() => {
     const loadScores = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      let userId = user?.id;
-      if (!userId && process.env.ENVIRONMENT === "local") {
-        userId = "00000000-0000-0000-0000-000000000001";
-      }
+      try {
+        const res = await fetch("/api/scores");
+        if (!res.ok) {
+          if (res.status === 401) return router.push("/login");
+          return;
+        }
 
-      if (!userId) {
-        router.push("/login");
-        return;
-      }
-      
-      setUserName(user?.user_metadata?.full_name || (process.env.ENVIRONMENT === "local" ? "Local Student" : "Student"));
+        const data = await res.json();
+        setUserName(data.userName || "Student");
 
-      const { data: attempts } = await supabase
-        .from("attempts")
-        .select(`
-          exam_id,
-          total_score,
-          max_score,
-          submitted_at,
-          exams (
-            title
-          )
-        `)
-        .eq("user_id", userId)
-        .eq("status", "submitted")
-        .order("submitted_at", { ascending: false });
-
-      if (attempts) {
-        const formattedScores: ScoreRecord[] = (attempts as unknown as AttemptWithExam[]).map((a) => ({
-          exam_id: a.exam_id,
-          exam_title: a.exams?.title || "Unknown Exam",
-          total_score: a.total_score || 0,
-          max_score: a.max_score || 0,
-          submitted_at: a.submitted_at
-        }));
-        setScores(formattedScores);
+        if (data.attempts) {
+          const formattedScores: ScoreRecord[] = (data.attempts as AttemptWithExam[]).map((a) => ({
+            exam_id: a.exam_id,
+            exam_title: a.exams?.title || "Unknown Exam",
+            total_score: a.total_score || 0,
+            max_score: a.max_score || 0,
+            submitted_at: a.submitted_at
+          }));
+          setScores(formattedScores);
+        }
+      } catch (err) {
+        console.error("Failed to load scores:", err);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     loadScores();
@@ -88,11 +71,11 @@ export default function MyScores() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-10">
+      <header className="flex flex-col gap-3 px-4 sm:px-6 py-4 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-10 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => router.push("/exam/join")}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            className="p-2 hover:bg-card-hover rounded-lg transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -100,7 +83,8 @@ export default function MyScores() {
           </button>
           <span className="text-lg font-bold gradient-text">My Scores</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
+          <ThemeToggle />
           <span className="text-sm text-muted-foreground hidden sm:inline">{userName}</span>
           <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary">
             {userName[0]}
@@ -108,7 +92,7 @@ export default function MyScores() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full p-6 animate-fade-in">
+      <main className="flex-1 max-w-4xl mx-auto w-full p-4 sm:p-6 animate-fade-in">
         <div className="mb-8">
           <h1 className="text-3xl font-black text-foreground mb-2">Performance History</h1>
           <p className="text-muted-foreground text-sm">Review your results from past examinations.</p>
@@ -173,7 +157,7 @@ export default function MyScores() {
                     </div>
                     <button 
                       onClick={() => router.push(`/exam/${record.exam_id}/submitted`)}
-                      className="ml-auto p-2 rounded-lg bg-muted hover:bg-muted-hover text-muted-foreground transition-colors"
+                      className="ml-auto p-2 rounded-lg bg-card-hover hover:bg-border text-muted-foreground transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

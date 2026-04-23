@@ -200,7 +200,7 @@ export default function CreateExam() {
 
   if (result) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-full">
+      <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center min-h-full">
         <div className="w-full max-w-md text-center animate-slide-up">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-success to-accent mb-6 glow-success">
             <svg
@@ -224,7 +224,7 @@ export default function CreateExam() {
             Share this code with your students
           </p>
 
-          <div className="glass-card p-8 mb-6">
+          <div className="glass-card p-6 sm:p-8 mb-6">
             <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">
               Exam Code
             </p>
@@ -233,7 +233,7 @@ export default function CreateExam() {
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <button
               onClick={() =>
                 navigator.clipboard.writeText(result.examCode)
@@ -257,7 +257,7 @@ export default function CreateExam() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-lg mx-auto">
         <h1 className="text-2xl font-bold text-foreground mb-2">
           Create New Exam
@@ -266,7 +266,7 @@ export default function CreateExam() {
           Create a new exam session. You must upload a valid JSON file of questions. The file will be validated before the exam is created.
         </p>
 
-        <div className="glass-card p-8">
+        <div className="glass-card p-6 sm:p-8">
           <form onSubmit={handleCreate} className="space-y-6">
             {error && (
               <div className="p-3 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm">
@@ -292,7 +292,7 @@ export default function CreateExam() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="duration"
@@ -409,14 +409,14 @@ export default function CreateExam() {
             {/* Validated Questions Preview */}
             {isValidated && validatedQuestions && (
               <div className="rounded-xl border border-success/20 overflow-hidden">
-                <div className="bg-success/10 px-4 py-3 flex items-center justify-between">
+                <div className="bg-success/10 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <span className="text-sm font-bold text-success">
                       All {validatedQuestions.length} questions validated
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
                     {(() => {
                       const types = validatedQuestions.reduce((acc, q) => {
                         const t = q.questionType || "theory";

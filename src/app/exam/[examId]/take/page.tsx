@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/browser";
 import { useState, useEffect, useCallback, useRef, use, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Question {
   id: string;
@@ -17,6 +18,22 @@ interface Question {
 }
 
 interface AnswerState {
+  selected_option_id: string | null;
+  is_bookmarked: boolean;
+  is_skipped: boolean;
+}
+
+interface ApiExamQuestion extends Omit<
+  Question,
+  "questionType" | "codeSnippet" | "options"
+> {
+  options: string | Question["options"];
+  question_type?: string | null;
+  code_snippet?: string | null;
+}
+
+interface ExistingAnswer {
+  question_id: string;
   selected_option_id: string | null;
   is_bookmarked: boolean;
   is_skipped: boolean;
@@ -194,115 +211,90 @@ function TakeExamContent({ examId }: { examId: string }) {
 
     setIsFullScreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handleFullScreenChange);
-    // Initial enter
-    enterFullScreen();
+
+    // REMOVED: Initial enterFullScreen call to avoid "user gesture" error
 
     return () => {
       document.removeEventListener("fullscreenchange", handleFullScreenChange);
     };
-  }, [enterFullScreen]);
+  }, []); // enterFullScreen removed from deps as it's stable from useCallback
 
   // Load exam data
   useEffect(() => {
     const loadExam = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const res = await fetch(`/api/exam/${examId}/take-init`);
+        if (!res.ok) {
+          if (res.status === 401) {
+            router.push("/login");
+          } else if (res.status === 404) {
+            router.push("/exam/join");
+          }
+          return;
+        }
 
-      let userId = user?.id;
-      if (!userId && process.env.NEXT_PUBLIC_ENVIRONMENT === "local") {
-        userId = "00000000-0000-0000-0000-000000000001";
+        const data = await res.json();
+        const {
+          attempt,
+          questions: examQuestions,
+          answers: existingAnswers,
+          serverNow,
+        } = data;
+
+        if (attempt.status === "submitted") {
+          router.push(`/exam/${examId}/submitted`);
+          return;
+        }
+
+        setAttemptId(attempt.id);
+        attemptIdRef.current = attempt.id;
+
+        setServerDrift(serverNow - Date.now());
+
+        const dueAt = new Date(attempt.server_due_at).getTime();
+        const remaining = Math.max(0, Math.floor((dueAt - serverNow) / 1000));
+        setTimeLeft(remaining);
+
+        if (examQuestions && examQuestions.length > 0) {
+          const enriched: Question[] = (examQuestions as ApiExamQuestion[]).map(
+            (eq) => ({
+              ...eq,
+              options:
+                typeof eq.options === "string"
+                  ? JSON.parse(eq.options)
+                  : eq.options,
+              questionType: eq.question_type || "theory",
+              codeSnippet: eq.code_snippet || undefined,
+            }),
+          );
+
+          const shuffled = shuffleArray(enriched, attempt.id);
+          setQuestions(shuffled);
+        } else {
+          // If no questions found, redirect to join with error
+          console.error("No questions found for this exam");
+        }
+
+        if (existingAnswers) {
+          const answerMap: Record<string, AnswerState> = {};
+          (existingAnswers as ExistingAnswer[]).forEach((a) => {
+            answerMap[a.question_id] = {
+              selected_option_id: a.selected_option_id,
+              is_bookmarked: a.is_bookmarked,
+              is_skipped: a.is_skipped,
+            };
+          });
+          setAnswers(answerMap);
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Failed to load exam:", err);
       }
-
-      if (!userId) {
-        router.push("/login");
-        return;
-      }
-
-      // Get attempt
-      const { data: attempt } = await supabase
-        .from("attempts")
-        .select("id, server_due_at, status")
-        .eq("exam_id", examId)
-        .eq("user_id", userId)
-        .single();
-
-      if (!attempt) {
-        router.push("/exam/join");
-        return;
-      }
-
-      if (attempt.status === "submitted") {
-        router.push(`/exam/${examId}/submitted`);
-        return;
-      }
-
-      setAttemptId(attempt.id);
-      attemptIdRef.current = attempt.id; // BUG-05: Keep ref in sync
-
-      // Calculate time remaining using server time and store drift
-      const { data: serverTimeData } = await supabase.rpc("get_server_time");
-      const serverNow = serverTimeData
-        ? new Date(serverTimeData).getTime()
-        : Date.now();
-
-      setServerDrift(serverNow - Date.now());
-
-      const dueAt = new Date(attempt.server_due_at).getTime();
-      const remaining = Math.max(0, Math.floor((dueAt - serverNow) / 1000));
-      setTimeLeft(remaining);
-
-      // Get questions (without correct answers — view includes them)
-      const { data: examQuestions } = await supabase
-        .from("student_exam_questions")
-        .select(
-          "id, topic, difficulty, question_type, question, code_snippet, options, position, points",
-        )
-        .eq("exam_id", examId)
-        .order("position");
-
-      if (examQuestions) {
-        const enriched = examQuestions.map((eq) => {
-          return {
-            ...eq,
-            options:
-              typeof eq.options === "string"
-                ? JSON.parse(eq.options)
-                : eq.options,
-            questionType: eq.question_type || "theory",
-            codeSnippet: eq.code_snippet || null,
-          };
-        });
-
-        // Shuffle questions using attempt ID as seed
-        const shuffled = shuffleArray(enriched, attempt.id);
-        setQuestions(shuffled);
-      }
-
-      // Load existing answers
-      const { data: existingAnswers } = await supabase
-        .from("attempt_answers")
-        .select("question_id, selected_option_id, is_bookmarked, is_skipped")
-        .eq("attempt_id", attempt.id);
-
-      if (existingAnswers) {
-        const answerMap: Record<string, AnswerState> = {};
-        existingAnswers.forEach((a) => {
-          answerMap[a.question_id] = {
-            selected_option_id: a.selected_option_id,
-            is_bookmarked: a.is_bookmarked,
-            is_skipped: a.is_skipped,
-          };
-        });
-        setAnswers(answerMap);
-      }
-
-      setLoading(false);
     };
 
     loadExam();
-  }, [examId, router]); // Removed startQuestionId to prevent reload
+  }, [examId, router]);
 
   // BUG-05: Use ref-based auto-submit to avoid stale closure
   const handleAutoSubmit = useCallback(async () => {
@@ -451,6 +443,28 @@ function TakeExamContent({ examId }: { examId: string }) {
     );
   }
 
+  if (questions.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="glass-card p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-4">
+            No Questions Found
+          </h2>
+          <p className="text-muted-foreground mb-8">
+            This exam doesn&apos;t seem to have any questions assigned yet.
+            Please contact the administrator.
+          </p>
+          <button
+            onClick={() => router.push("/exam/join")}
+            className="w-full py-3 rounded-xl bg-primary text-white font-semibold"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const currentQuestion = questions[currentIndex];
   if (!currentQuestion) return null;
 
@@ -465,8 +479,8 @@ function TakeExamContent({ examId }: { examId: string }) {
     <div className="min-h-screen flex flex-col">
       {/* Top bar */}
       <header className="sticky top-0 z-50 bg-card/90 backdrop-blur-lg border-b border-border px-4 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium text-foreground">
               Q {currentIndex + 1}/{questions.length}
             </span>
@@ -484,7 +498,7 @@ function TakeExamContent({ examId }: { examId: string }) {
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Save indicator */}
             {saving && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -492,6 +506,9 @@ function TakeExamContent({ examId }: { examId: string }) {
                 Saving
               </span>
             )}
+
+            {/* Theme toggle */}
+            <ThemeToggle />
 
             {/* Progress */}
             <span className="text-xs text-muted-foreground">
@@ -514,9 +531,9 @@ function TakeExamContent({ examId }: { examId: string }) {
         </div>
       </header>
 
-      <div className="flex-1 flex max-w-7xl mx-auto w-full">
+      <div className="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto w-full">
         {/* Main content */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
           <div className="max-w-3xl mx-auto animate-fade-in" key={currentIndex}>
             {/* Question */}
             <div className="mb-6">
@@ -577,8 +594,8 @@ function TakeExamContent({ examId }: { examId: string }) {
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-4 mt-8 pt-6 border-t border-border lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={() => toggleBookmark(currentQuestion.id)}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
@@ -650,7 +667,7 @@ function TakeExamContent({ examId }: { examId: string }) {
                 )}
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
                 <button
                   onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
                   disabled={currentIndex === 0}
@@ -684,7 +701,7 @@ function TakeExamContent({ examId }: { examId: string }) {
 
         {/* Question navigator sidebar */}
         <aside
-          className={`w-72 border-l border-border p-4 overflow-y-auto sticky top-16 h-[calc(100vh-4rem)] transition-all ${
+          className={`w-full lg:w-72 border-t lg:border-t-0 lg:border-l border-border p-4 overflow-y-auto lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] transition-all ${
             showNav ? "" : "hidden"
           }`}
         >

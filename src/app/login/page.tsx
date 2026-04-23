@@ -1,5 +1,6 @@
 "use client";
 
+import { FloatingThemeToggle } from "@/components/FloatingThemeToggle";
 import { createClient } from "@/lib/supabase/browser";
 import { useState } from "react";
 
@@ -25,6 +26,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
+      <FloatingThemeToggle />
       <div className="w-full max-w-md bg-card rounded-2xl shadow-xl overflow-hidden glass-card p-8 relative">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
@@ -60,7 +62,7 @@ export default function Login() {
           <button
             onClick={signInWithGoogle}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg border border-border/50"
+            className="w-full flex items-center justify-center gap-3 bg-card hover:bg-card-hover text-foreground font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg border border-border/50"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

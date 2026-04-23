@@ -136,7 +136,7 @@ export default function StudentsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Students</h1>
@@ -162,7 +162,7 @@ export default function StudentsPage() {
               )}
             </button>
           )}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <svg className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input
               type="text"
@@ -177,7 +177,7 @@ export default function StudentsPage() {
 
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left p-4 text-muted-foreground font-medium">Name</th>
