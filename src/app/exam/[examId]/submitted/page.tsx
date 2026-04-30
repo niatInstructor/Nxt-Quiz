@@ -418,6 +418,7 @@ export default function Submitted({
       {/* ──────────────────────── DETAILED REVIEW ──────────────────────── */}
       {showReview && (
         <div className="max-w-4xl mx-auto px-4 mt-12 animate-slide-up">
+          {isPublished && (
           <div className="sticky top-6 z-40 bg-card/80 backdrop-blur-md p-2 rounded-2xl border border-border flex flex-wrap items-center justify-between gap-3 shadow-lg mb-8">
             <h2 className="px-4 text-sm font-bold text-foreground">
               Examination Review
@@ -425,14 +426,8 @@ export default function Submitted({
             <div className="flex w-full flex-wrap items-center gap-1 sm:w-auto">
               {(["All", "Correct", "Incorrect", "Skipped"] as const).map(
                 (f) => {
-                  // If results are not published, only show All and Skipped filters
-                  if (!isPublished && (f === "Correct" || f === "Incorrect"))
-                    return null;
-
                   const count = results.filter((r) => {
                     if (f === "All") return true;
-                    if (!isPublished && f === "Skipped")
-                      return !r.selectedOptionId;
                     if (f === "Correct")
                       return r.selectedOptionId === r.correctOptionId;
                     if (f === "Incorrect")
@@ -461,6 +456,7 @@ export default function Submitted({
               )}
             </div>
           </div>
+          )}
 
           <div className="space-y-6">
             {filteredResults.map((r) => {
@@ -542,7 +538,7 @@ export default function Submitted({
                         return (
                           <div
                             key={opt.id}
-                            className={`relative p-4 rounded-2xl border-2 transition-all flex items-start gap-4 overflow-hidden ${stateClass}`}
+                            className={`relative p-4 rounded-2xl border-2 transition-all flex items-start gap-4 ${stateClass}`}
                           >
                             <div
                               className={`w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-xs font-black ${
@@ -562,12 +558,12 @@ export default function Submitted({
                             </span>
 
                             {isUserChoice && (
-                              <span className="absolute -top-2.5 right-4 px-2 py-0.5 bg-foreground text-background text-[9px] font-black rounded-full uppercase">
+                              <span className="absolute -top-3 right-3 px-2.5 py-1 bg-foreground text-background text-[9px] font-black rounded-md uppercase shadow-sm z-10">
                                 Your Choice
                               </span>
                             )}
                             {isTheCorrectAnswer && !isUserChoice && (
-                              <span className="absolute -top-2.5 right-4 px-2 py-0.5 bg-success text-white text-[9px] font-black rounded-full uppercase">
+                              <span className="absolute -top-3 right-3 px-2.5 py-1 bg-success text-white text-[9px] font-black rounded-md uppercase shadow-sm z-10">
                                 Correct Answer
                               </span>
                             )}
