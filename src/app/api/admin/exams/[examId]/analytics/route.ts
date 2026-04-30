@@ -185,10 +185,24 @@ export async function GET(
 
   // Per-question detailed breakdown with option selection counts
   // We compute correct and wrong exclusively for SUBMITTED attempts
+  // Build a lookup from attempt_id -> student name
+  const attemptToName = new Map<string, string>();
+  (attempts || []).forEach((a) => {
+    const profile = a.profiles as unknown as {
+      full_name: string;
+      email: string;
+      student_college_id: string;
+    };
+    attemptToName.set(a.id, profile?.full_name || "Unknown");
+  });
+
   const answersByQuestion = new Map<string, { A: number; B: number; C: number; D: number; skipped: number; bookmarked: number; totalSubmittedAnswers: number }>();
+  // Track which students selected each option per question: questionId -> optionLetter -> studentName[]
+  const optionStudentsByQuestion = new Map<string, { A: string[]; B: string[]; C: string[]; D: string[] }>();
   allAnswers.forEach((ans) => {
     const isSubmitted = submittedAttemptsIds.has(ans.attempt_id);
     const entry = answersByQuestion.get(ans.question_id) || { A: 0, B: 0, C: 0, D: 0, skipped: 0, bookmarked: 0, totalSubmittedAnswers: 0 };
+    const studentEntry = optionStudentsByQuestion.get(ans.question_id) || { A: [], B: [], C: [], D: [] };
     
     if (isSubmitted) {
       entry.totalSubmittedAnswers++;
@@ -199,11 +213,14 @@ export async function GET(
       // We only type A|B|C|D here to match schema
       if (isSubmitted && letter && entry[letter] !== undefined) {
         entry[letter]++;
+        const studentName = attemptToName.get(ans.attempt_id) || "Unknown";
+        studentEntry[letter].push(studentName);
       }
     }
     if (isSubmitted && ans.is_skipped) entry.skipped++;
     if (isSubmitted && ans.is_bookmarked) entry.bookmarked++;
     answersByQuestion.set(ans.question_id, entry);
+    optionStudentsByQuestion.set(ans.question_id, studentEntry);
   });
 
   const detailedQuestions = (examQuestions || []).map((eq) => {
@@ -256,6 +273,7 @@ export async function GET(
         C: optionCounts.C,
         D: optionCounts.D,
       },
+      optionStudents: optionStudentsByQuestion.get(qId) || { A: [], B: [], C: [], D: [] },
     };
   });
 

@@ -51,6 +51,13 @@ interface OptionBreakdown {
   D: number;
 }
 
+interface OptionStudents {
+  A: string[];
+  B: string[];
+  C: string[];
+  D: string[];
+}
+
 interface DetailedQuestion {
   position: number;
   points: number;
@@ -71,6 +78,7 @@ interface DetailedQuestion {
   bookmarkedCount: number;
   submittedAttempts: number;
   optionBreakdown: OptionBreakdown;
+  optionStudents: OptionStudents;
 }
 
 interface StudentResult {
@@ -1028,6 +1036,7 @@ export default function Analytics({
                                           : 0;
                                       const isCorrect =
                                         optId === q.correctOptionId;
+                                      const students = q.optionStudents?.[optId] || [];
                                       return (
                                         <div
                                           key={optId}
@@ -1038,8 +1047,8 @@ export default function Analytics({
                                           >
                                             {optId}
                                           </span>
-                                          <div className="flex-1">
-                                            <div className="w-full h-5 bg-border/50 rounded-md overflow-hidden relative">
+                                          <div className="flex-1 relative group/bar">
+                                            <div className="w-full h-5 bg-border/50 rounded-md overflow-hidden relative cursor-pointer">
                                               <div
                                                 className={`h-full rounded-md transition-all ${isCorrect ? "bg-success/60" : "bg-danger/30"}`}
                                                 style={{ width: `${pct}%` }}
@@ -1048,6 +1057,21 @@ export default function Analytics({
                                                 {count} ({pct}%)
                                               </span>
                                             </div>
+                                            {students.length > 0 && (
+                                              <div className="absolute left-0 bottom-full mb-2 z-50 hidden group-hover/bar:block">
+                                                <div className="bg-foreground text-background text-[10px] rounded-lg px-3 py-2 shadow-xl max-w-[220px] max-h-[160px] overflow-y-auto">
+                                                  <p className="font-bold mb-1 border-b border-background/20 pb-1">
+                                                    {students.length} student{students.length !== 1 ? "s" : ""}
+                                                  </p>
+                                                  {students.map((name, idx) => (
+                                                    <p key={idx} className="py-0.5 leading-tight">
+                                                      {name}
+                                                    </p>
+                                                  ))}
+                                                </div>
+                                                <div className="w-2 h-2 bg-foreground rotate-45 absolute left-4 -bottom-1" />
+                                              </div>
+                                            )}
                                           </div>
                                         </div>
                                       );
